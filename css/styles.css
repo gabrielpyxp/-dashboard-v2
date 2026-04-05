@@ -561,7 +561,10 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
 
 .pcard-body { padding: 14px 16px; }
 
-.pcard-name { font-weight: 700; color: var(--white); font-size: 13px; margin-bottom: 4px; }
+.pcard-name {
+  font-weight: 700; color: var(--white); font-size: 13px;
+  margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .pcard-cat {
   display: inline-block; font-size: 10px; font-weight: 600;
   color: var(--yellow); padding: 2px 6px;
@@ -585,18 +588,6 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
 
 .pcard-fornecedor { font-size: 11px; color: var(--w3); margin-bottom: 10px; }
 
-.pcard-actions {
-  display: flex; gap: 6px; padding: 0 16px 14px;
-}
-.stock-btn {
-  width: 28px; height: 28px; border-radius: 6px;
-  background: var(--surface); border: 1px solid var(--border-lt);
-  color: var(--white); font-size: 15px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-}
-.stock-btn:hover { border-color: var(--yellow); color: var(--yellow); }
-
 .icon-btn {
   width: 28px; height: 28px; border-radius: 6px;
   background: var(--surface); border: 1px solid var(--border-lt);
@@ -606,6 +597,74 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
 .icon-btn:hover { color: var(--white); border-color: var(--yellow); }
 .icon-btn.danger:hover { color: var(--red); border-color: var(--red); }
 .icon-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* ── Product Card Internal (JS-generated) ───────────────── */
+.pcbody { padding: 14px 16px; }
+
+.pcname {
+  font-weight: 700; color: var(--white); font-size: 13px;
+  margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.pctags {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;
+}
+
+.pcdesc { font-size: 11px; color: var(--w2); margin-bottom: 8px; line-height: 1.5; }
+
+.pcgrid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  font-size: 11px; margin-bottom: 10px;
+}
+
+.pmini {}
+.pmlbl { color: var(--w3); font-size: 10px; }
+.pmval { color: var(--white); font-weight: 600; }
+
+.pcforn { font-size: 11px; color: var(--w3); margin-bottom: 10px; }
+.pcforn span { font-weight: 600; }
+
+.pcfoot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px 14px; gap: 6px;
+}
+
+.tag-cat {
+  font-size: 10px; font-weight: 600; color: var(--yellow);
+  padding: 2px 6px; background: var(--yellow-bg); border-radius: 3px;
+}
+
+/* ── Stock Control ──────────────────────────────────────── */
+.sctrl { display: flex; align-items: center; gap: 8px; }
+
+.scbtn {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--surface); border: 1px solid var(--border-lt);
+  color: var(--white); font-size: 15px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all var(--ease);
+}
+.scbtn:hover { border-color: var(--yellow); color: var(--yellow); }
+
+.scnum { font-size: 13px; font-weight: 700; min-width: 20px; text-align: center; }
+
+.stock-btn {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--surface); border: 1px solid var(--border-lt);
+  color: var(--white); font-size: 15px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.stock-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+
+/* ── Empty State ────────────────────────────────────────── */
+.empty-full {
+  grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--w3);
+}
+.empty-full svg {
+  width: 48px; height: 48px; stroke: var(--w4); fill: none; stroke-width: 1.5; margin-bottom: 16px;
+}
+.empty-full p { font-size: 13px; line-height: 1.6; }
 
 /* ── Modal ──────────────────────────────────────────────── */
 .movl {
@@ -724,7 +783,15 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
 }
 .ai-card:hover { border-color: var(--yellow); }
 
-/* Agent page */
+.ai-card-num { font-size: 10px; color: var(--w3); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.ai-card-title { font-size: 13px; font-weight: 700; color: var(--yellow); margin-bottom: 4px; }
+.ai-card-desc { font-size: 11px; color: var(--w2); margin-bottom: 6px; line-height: 1.5; }
+.ai-apply {
+  font-size: 11px; color: var(--yellow); padding: 4px 10px;
+  background: var(--yellow-bg); border-radius: 4px; display: inline-block; font-weight: 600;
+}
+
+/* ── AI Agent Page ──────────────────────────────────────── */
 .ai-agent-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start;
 }
@@ -767,7 +834,6 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
 .fctl-area:focus { outline: none; border-color: var(--yellow); }
 .fctl-area::placeholder { color: var(--w4); }
 
-/* Trigger button */
 .btn-ai-trigger {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 14px; background: var(--yellow-bg);
@@ -777,13 +843,6 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
 }
 .btn-ai-trigger:hover { background: var(--yellow-bg2); border-color: var(--yellow); }
 .btn-ai-trigger svg { stroke: var(--yellow); fill: none; width: 14px; height: 14px; stroke-width: 2; }
-.ai-card-num { font-size: 10px; color: var(--w3); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
-.ai-card-title { font-size: 13px; font-weight: 700; color: var(--yellow); margin-bottom: 4px; }
-.ai-card-desc { font-size: 11px; color: var(--w2); margin-bottom: 6px; line-height: 1.5; }
-.ai-apply {
-  font-size: 11px; color: var(--yellow); padding: 4px 10px;
-  background: var(--yellow-bg); border-radius: 4px; display: inline-block; font-weight: 600;
-}
 
 /* ── Sale Preview ───────────────────────────────────────── */
 .sprev {
@@ -811,7 +870,7 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
 .lprev.loss strong { color: var(--red); }
 .lprev.loss { border-color: rgba(255, 85, 85, .2); background: var(--red-bg); }
 
-/* ── Draft note ─────────────────────────────────────────── */
+/* ── Draft Note ─────────────────────────────────────────── */
 .draft-note {
   display: none; font-size: 11px; color: var(--w3);
   padding: 8px 12px; margin-bottom: 8px;
@@ -851,7 +910,7 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
 .sval { font-weight: 700; color: var(--white); }
 .sval.g { color: var(--yellow); }
 
-/* ── History ─────────────────────────────────────────────── */
+/* ── History ────────────────────────────────────────────── */
 .hlist { max-height: 500px; overflow-y: auto; }
 .hitem {
   display: flex; gap: 12px; padding: 12px 0;
