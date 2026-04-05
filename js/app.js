@@ -1,6 +1,6 @@
 // js/app.js — Ponto de entrada da aplicação
 
-import { sb, MARKETPLACES, CATEGORIAS } from './config.js';
+import { sb, MARKETPLACES, CATEGORIAS, AI_FUNCTION_URL } from './config.js';
 import { getState, setState, subscribe } from './state.js';
 import { initAuthListener, login, signup, forgotPassword, logout } from './services/auth.service.js';
 import { loadVendas, createVenda, updateVenda, deleteVenda } from './services/vendas.service.js';
