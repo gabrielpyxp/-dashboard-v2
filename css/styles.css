@@ -727,12 +727,35 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
   transition: border-color var(--ease), background var(--ease);
 }
 .iarea:hover { border-color: var(--yellow); background: var(--yellow-bg); }
+.iarea.hasimg {
+  padding: 8px;
+  border-style: solid;
+  border-color: var(--border-lt);
+}
 .iarea svg {
   width: 28px; height: 28px; stroke: var(--w3); fill: none; stroke-width: 1.5;
 }
 .itxt { font-size: 13px; font-weight: 600; color: var(--w2); }
 .isub { font-size: 10px; color: var(--w4); }
 .iarea .preview-img { max-width: 100%; max-height: 200px; border-radius: var(--rs); margin-top: 8px; }
+.iprev {
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: var(--rs);
+  display: block;
+}
+.iremove {
+  margin-top: 6px;
+  font-size: 12px;
+  padding: 4px 12px;
+  border: none;
+  background: transparent;
+  color: var(--red);
+  cursor: pointer;
+  font-weight: 600;
+}
+.iremove:hover { text-decoration: underline; }
 .hidden-input { opacity: 0; width: 0; height: 0; position: absolute; }
 
 /* ── AI Panel ───────────────────────────────────────────── */
