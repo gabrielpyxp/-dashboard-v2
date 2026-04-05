@@ -1,7 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
+const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY')
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -16,53 +15,70 @@ serve(async (req) => {
 
   try {
     const body = await req.json()
-    const { base64, mimeType, categoria, fornecedor, nomeAtual, quantidade, descricao } = body
+    const { base64, mimeType, instrucoes, quantidade } = body
 
-    const imageContent = base64 ? [{
-      type: 'image' as const,
-      source: {
-        type: 'base64' as const,
-        media_type: mimeType,
-        data: base64,
-      },
-    }] : []
+    const systemPrompt = `Voce e um especialista em vendas, e-commerce e copywriting para marketplaces. Sua missao e receber fotos ou informacoes basicas de produtos e transforma-las em anuncios altamente otimizados para busca e conversao.
 
-    const productInfo = `Produto: ${nomeAtual || 'Desconhecido'}\nCategoria: ${categoria || 'Nao informada'}\nFornecedor: ${fornecedor || 'Nao informado'}\nCusto: R$ ${body.custo || 'N/A'}\nDescricao atual: ${descricao || 'Nenhuma'}\nQuantidade de sugestoes: ${quantidade || 3}`
+REGRAS OBRIGATORIAS:
+1. Use emojis de forma estrategica para destacar beneficios, organizar leitura e chamar atencao sem exageros.
+2. Sempre entregue DUAS descricoes: uma "Direta ao Ponto" e uma "Completa".
+3. TODAS as descricoes devem terminar com o bloco padrao de entrega e parcelamento.
 
-    const prompt = `Voce e especialista em copywriting para e-commerce. Com base nas informacoes do produto${base64 ? ' e na imagem fornecida' : ''}, gere ${quantidade || 3} opcoes de titulo e descricao otimizados para marketplace (Mercado Livre, Shopee).\n\nRegras:\n- Titulos: maximo 60 caracteres, com palavras-chave do produto\n- Descricoes: persuasivas, max 200 caracteres, destaque diferenciais\n- Gere exatamente ${quantidade || 3} opcoes\n\nResponda APENAS com JSON valido neste formato:\n[{"titulo": "opcao 1", "descricao": "descricao 1"}, {"titulo": "opcao 2", "descricao": "descricao 2"}]\n\nProduto: ${productInfo}`
+Retorne APENAS um JSON valido no seguinte formato, com ${quantidade || 3} objetos no array:
 
-    const messages: any[] = [{
-      role: 'user',
-      content: [...imageContent, { type: 'text', text: prompt }],
-    }]
+[
+  {
+    "titulo": "Titulo chamativo com no maximo 60 caracteres",
+    "descricaoCurta": "Nome do produto\\nFrases curtas com ✅ de caracteristicas\\n🚚 Entrega\\n💳 Parcelamento",
+    "descricaoLonga": "Nome do produto\\nParagrafo persuasivo de 3-4 linhas com emojis\\nO que voce vai levar com 🔸\\n🚚 Entrega\\n💳 Parcelamento",
+    "tags": "tags separadas por virgula em minusculas e sem acentos"
+  }
+]
 
-    const resp = await fetch(ANTHROPIC_API_URL, {
+IMPORTANTE: Use quebras de linha reais (\\n) nas descricoes. Retorne SOMENTE o array JSON, nada mais.`
+
+    const userText = instrucoes || 'Analise esta imagem do produto e crie anuncios otimizados para marketplace.'
+
+    const userContent: Array<any> = base64 && mimeType
+      ? [{ type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }, { type: 'text', text: userText }]
+      : [{ type: 'text', text: userText }]
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent },
+    ]
+
+    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': 'https://gabrielpyxp.github.io/-dashboard-v2/',
+        'X-Title': 'Revende Dashboard',
       },
       body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229',
-        max_tokens: 1024,
+        model: 'qwen/qwen3.6-plus:free',
+        max_tokens: 4096,
         messages,
       }),
     })
 
     if (!resp.ok) {
-      throw new Error(`Anthropic API error: ${resp.status}`)
+      const errText = await resp.text()
+      throw new Error(`OpenRouter API error: ${resp.status} - ${errText}`)
     }
 
     const data = await resp.json()
-    const text = data.content[0].text
-    const json = JSON.parse(text)
+    const text = data.choices?.[0]?.message?.content || ''
 
-    return new Response(JSON.stringify(json), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+    const match = text.match(/\[[\s\S]*\]/)
+    if (!match) throw new Error('Resposta invalida da IA')
+
+    const results = JSON.parse(match[0])
+    if (!Array.isArray(results)) throw new Error('Formato de resposta invalido')
+
+    return new Response(JSON.stringify({ results }), {
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     })
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {

@@ -825,6 +825,15 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
   width: 48px; height: 48px; stroke: var(--w4); margin-bottom: 16px;
 }
 .ai-agent-empty p { font-size: 13px; line-height: 1.6; }
+.ai-save-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 10px; padding: 6px 14px;
+  background: var(--yellow); color: #000;
+  border: none; border-radius: var(--rs);
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: background var(--ease);
+}
+.ai-save-btn:hover { background: var(--yellow-d); }
 
 .ai-agent-result {
   background: var(--surface); border: 1px solid var(--border-lt);

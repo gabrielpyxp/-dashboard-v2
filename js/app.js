@@ -12,7 +12,7 @@ import { generateTitles } from './services/ai.service.js';
 import { renderDashboard, renderTableMain, renderMeta } from './pages/dashboard.js';
 import { renderCatalogo } from './pages/catalogo.js';
 import { renderAnalise, renderMetas, renderHistorico, renderVendasPage, resetVendasFilter } from './pages/other.js';
-import { initAgenteSelects, initAgenteImgArea, renderAgenteResults, removeAgenteImg } from './pages/agente.js';
+import { initAgenteImgArea, renderAgenteResults, removeAgenteImg } from './pages/agente.js';
 import { renderImgArea, handleFotoChange, removeImg, showAiPanel } from './components/imageUpload.js';
 import { renderCharts } from './components/charts.js';
 import { toast, toastOk, toastErr } from './components/toast.js';
@@ -94,7 +94,7 @@ function navTo(page) {
     analise:   renderAnalise,
     metas:     renderMetas,
     historico: renderHistorico,
-    agente:    () => { initAgenteSelects(); initAgenteImgArea(); },
+    agente:    () => { initAgenteImgArea(); },
   };
   renders[page]?.();
 }
@@ -397,13 +397,10 @@ let agenteFotoBase64 = null;
 let agenteFotoMime = null;
 
 async function handleGenerateAgente() {
-  const nome = gv('agente-nome').trim();
-  const cat = gv('agente-cat');
-  const desc = gv('agente-desc-atual').trim();
-  const forn = gv('agente-forn').trim();
+  const instrucoes = gv('agente-instrucoes').trim();
 
-  if (!nome && !agenteFotoBase64) {
-    toastErr('Preencha o nome do produto ou adicione uma foto.');
+  if (!instrucoes && !agenteFotoBase64) {
+    toastErr('Adicione uma foto ou descreva o que deseja gerar.');
     return;
   }
 
@@ -415,15 +412,36 @@ async function handleGenerateAgente() {
   st('agente-status', 'Gerando...');
 
   try {
-    const results = await generateTitles({
+    const payload = {
       base64:     agenteFotoBase64 || null,
       mimeType:   agenteFotoMime || null,
-      categoria:  cat,
-      fornecedor: forn,
-      nomeAtual:  nome,
+      instrucoes,
       quantidade: agenteQtd,
-      descricao:  desc,
+    };
+
+    // Envia para a Edge Function
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token;
+
+    const res = await fetch(AI_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token ?? ''}`,
+        'apikey': 'sb_publishable_v7V78T_wzWtu3ZXXIzPOpw_ZdlN1joW',
+      },
+      body: JSON.stringify(payload),
     });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error || `Erro: ${res.status}`);
+    }
+
+    const json = await res.json();
+    const results = json.results || [];
+    if (!results.length) throw new Error('A IA não retornou resultados.');
+
     setState({ aiResults: results });
     renderAgenteResults(results);
     toastOk(`${results.length} sugestão(ões) gerada(s)!`);
@@ -443,6 +461,31 @@ function copyToClipboard(index, descOnly = false) {
   if (!r) return;
   const text = descOnly ? (r.descricao || r.description || '') : (r.titulo || r.title || '');
   navigator.clipboard.writeText(text).then(() => toastOk(descOnly ? 'Descrição copiada!' : 'Título copiado!')).catch(() => toastErr('Falha ao copiar.'));
+}
+
+/** Salva resultado da IA direto no catálogo */
+async function handleSaveAgenteResult(index) {
+  const results = getState().aiResults;
+  const r = results[index];
+  if (!r) return;
+
+  const nome = r.titulo?.trim() || 'Produto sem nome';
+  // Combina descrição curta e longa
+  const descricao = [r.descricaoCurta || r.descricao, r.descricaoLonga].filter(Boolean).join('\n\n');
+
+  btnLoading('btn-agente-gerar', true, 'Salvando...');
+  const { error } = await saveProduto(
+    { nome, descricao, categoria: '', fornecedor: '', custo: 0, venda: 0, estoque: 0, estoqueMin: 0 },
+    null, null, null
+  );
+
+  if (error) {
+    toastErr(typeof error === 'string' ? error : 'Erro ao salvar produto.');
+    btnLoading('btn-agente-gerar', false, 'Gerar com IA');
+    return;
+  }
+  toastOk('Produto salvo no catálogo!');
+  btnLoading('btn-agente-gerar', false, 'Gerar com IA');
 }
 
 // ── Exportar CSV (Vendas) ──────────────────────────────────
@@ -601,10 +644,9 @@ function initEvents() {
       }
 
       // Agente IA
-      case 'generateAgente':  handleGenerateAgente(); break;
-      case 'removeAgenteImg': removeAgenteImg(); break;
-      case 'copyAITitle':     copyToClipboard(index); break;
-      case 'copyAIDesc':      copyToClipboard(index, true); break;
+      case 'generateAgente':       handleGenerateAgente(); break;
+      case 'removeAgenteImg':      removeAgenteImg(); break;
+      case 'saveAgenteResult':     handleSaveAgenteResult(parseInt(index)); break;
       case 'setAgenteQtd': {
         agenteQtd = parseInt(qty);
         $$('.ai-qty-btn').forEach(b => {
