@@ -41,7 +41,7 @@ function prodCard(p) {
   const st_ = ze ? 'Sem estoque' : al ? 'Estoque baixo' : 'Em estoque';
   const mc = +p.margem >= 20 ? 'var(--green)' : +p.margem >= 0 ? 'var(--white2)' : 'var(--red)';
 
-  const imgEl = p.foto_url
+  const imgEl = p.foto_url && p.foto_url.length > 5
     ? `<img src="${san(p.foto_url)}" alt="${san(p.nome)}" class="pcard-img" loading="lazy">`
     : `<div class="pcard-img-ph"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
 
