@@ -41,6 +41,9 @@ function nomeMes(ym) {
   const d = new Date(an, parseInt(ms) - 1, 1);
   return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 }
+
+// ── Análise ───────────────────────────────────────────────────
+export function renderAnalise() {
   const { sales } = getState();
   const map = {};
   sales.forEach(s => {
