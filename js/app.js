@@ -424,6 +424,7 @@ async function handleGenerateAgente() {
       quantidade: agenteQtd,
       descricao:  desc,
     });
+    setState({ aiResults: results });
     renderAgenteResults(results);
     toastOk(`${results.length} sugestão(ões) gerada(s)!`);
   } catch (err) {

@@ -727,6 +727,27 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
 }
 .ai-agent-empty p { font-size: 13px; line-height: 1.6; }
 
+.ai-agent-result {
+  background: var(--surface); border: 1px solid var(--border-lt);
+  border-radius: var(--rs); padding: 14px; margin-bottom: 10px;
+  transition: border-color var(--ease);
+}
+.ai-agent-result:hover { border-color: var(--yellow); }
+.ai-result-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+}
+.ai-result-num { font-size: 10px; color: var(--w3); text-transform: uppercase; letter-spacing: .5px; }
+.ai-result-actions { display: flex; gap: 4px; }
+.ai-copy-btn {
+  padding: 4px 6px; border-radius: 4px; background: var(--card);
+  color: var(--w3); display: flex; align-items: center; cursor: pointer;
+  transition: all var(--ease);
+}
+.ai-copy-btn:hover { color: var(--yellow); border-color: var(--yellow); }
+.ai-copy-btn svg { stroke: currentColor; fill: none; stroke-width: 2; }
+.ai-result-title { font-size: 14px; font-weight: 700; color: var(--yellow); margin-bottom: 6px; }
+.ai-result-desc { font-size: 12px; color: var(--w2); line-height: 1.6; }
+
 .fctl-area {
   width: 100%; min-height: 80px; padding: 12px;
   background: var(--card); border: 1px solid var(--border-lt);

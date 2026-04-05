@@ -3,7 +3,8 @@
 import { CATEGORIAS } from '../config.js';
 import { getState, setState } from '../state.js';
 import { san } from '../utils/security.js';
-import { $, $$, gv } from '../utils/dom.js';
+import { $, $$, gv, st } from '../utils/dom.js';
+
 import { validateImage, toBase64 } from '../utils/security.js';
 import { toast, toastOk, toastErr } from '../components/toast.js';
 

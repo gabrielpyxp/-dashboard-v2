@@ -7,10 +7,10 @@ import { getState } from '../state.js';
 
 /**
  * Gera sugestões de título e descrição para um produto.
- * @param {{ base64, mimeType, categoria, fornecedor, nomeAtual, quantidade }} opts
+ * @param {{ base64, mimeType, categoria, fornecedor, nomeAtual, quantidade, descricao }} opts
  * @returns {Promise<Array<{titulo: string, descricao: string}>>}
  */
-export async function generateTitles({ base64, mimeType, categoria, fornecedor, nomeAtual, quantidade = 3 }) {
+export async function generateTitles({ base64, mimeType, categoria, fornecedor, nomeAtual, quantidade = 3, descricao }) {
   // Obtém token de sessão para autenticar na Edge Function
   const { data: { session } } = await sb.auth.getSession();
   const token = session?.access_token;
@@ -22,7 +22,7 @@ export async function generateTitles({ base64, mimeType, categoria, fornecedor, 
       'Authorization': `Bearer ${token ?? ''}`,
       'apikey': 'sb_publishable_v7V78T_wzWtu3ZXXIzPOpw_ZdlN1joW',
     },
-    body: JSON.stringify({ base64, mimeType, categoria, fornecedor, nomeAtual, quantidade }),
+    body: JSON.stringify({ base64, mimeType, categoria, fornecedor, nomeAtual, quantidade, descricao }),
   });
 
   if (!res.ok) {
