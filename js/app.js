@@ -53,7 +53,7 @@ async function onLogin(user) {
   $('auth-page')?.classList.remove('show');
   $('sidebar').style.display  = 'flex';
   $('main').style.display     = 'block';
-  $('mob-hdr').style.display  = 'flex';
+  $('mob-hdr').style.display  = '';
   $('ls')?.classList.add('hide');
 
   // Usuário na sidebar
