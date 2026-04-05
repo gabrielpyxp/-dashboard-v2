@@ -12,7 +12,8 @@ import { generateTitles } from './services/ai.service.js';
 import { renderDashboard, renderTableMain, renderMeta } from './pages/dashboard.js';
 import { renderCatalogo } from './pages/catalogo.js';
 import { renderAnalise, renderMetas, renderHistorico, renderVendasPage, resetVendasFilter } from './pages/other.js';
-import { renderImgArea, handleFotoChange, removeImg } from './components/imageUpload.js';
+import { initAgenteSelects, initAgenteImgArea, renderAgenteResults, removeAgenteImg } from './pages/agente.js';
+import { renderImgArea, handleFotoChange, removeImg, showAiPanel } from './components/imageUpload.js';
 import { renderCharts } from './components/charts.js';
 import { toast, toastOk, toastErr } from './components/toast.js';
 import { $, $$, gv, sv, sh, st, show, hide, toggle, setMsg, clearMsg, btnLoading, clearInputs } from './utils/dom.js';
@@ -93,6 +94,7 @@ function navTo(page) {
     analise:   renderAnalise,
     metas:     renderMetas,
     historico: renderHistorico,
+    agente:    () => { initAgenteSelects(); initAgenteImgArea(); },
   };
   renders[page]?.();
 }
@@ -322,20 +324,27 @@ async function handleSaveProd() {
 async function handleGenerateAI() {
   const { fotoBase64, fotoMimeType, aiQtd } = getState();
   const btn = $('btn-generate-ai');
+  const hasImage = !!(fotoBase64 && fotoMimeType);
 
-  // Mostra estado de carregamento com efeito pulsante
+  // Validação mínima: ou tem foto ou tem categoria ou tem nome
+  const categoria = gv('fp-cat');
+  const nomeAtual = gv('fp-nome').trim();
+  if (!hasImage && !categoria && !nomeAtual) {
+    toastErr('Adicione uma foto ou preencha o nome e categoria para usar a IA.');
+    return;
+  }
+
+  // Mostra loading
   if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:14px;height:14px"></div> Gerando com IA...'; }
-
-  // Mostra loading pulsante
   sh('ai-results', '<div class="ai-loading" style="text-align:center;padding:20px"><div class="spinner" style="width:24px;height:24px;display:inline-block;animation:pulse .8s ease-in-out infinite"></div><p style="margin-top:10px;color:var(--w3);font-size:13px">Gerando com IA...</p></div>');
 
   try {
     const results = await generateTitles({
-      base64:    fotoBase64  || null,
-      mimeType:  fotoMimeType || null,
-      categoria:  gv('fp-cat'),
+      base64:     fotoBase64  || null,
+      mimeType:   fotoMimeType || null,
+      categoria,
       fornecedor: gv('fp-forn'),
-      nomeAtual:  gv('fp-nome'),
+      nomeAtual,
       quantidade: aiQtd,
     });
 
@@ -380,6 +389,59 @@ function applyAITitle(index) {
   sv('fp-nome', r.titulo);
   if (r.descricao) sv('fp-desc', r.descricao);
   toastOk('Título aplicado!');
+}
+
+// ── Agente IA — página dedicada ─────────────────────────────
+let agenteQtd = 3;
+let agenteFotoBase64 = null;
+let agenteFotoMime = null;
+
+async function handleGenerateAgente() {
+  const nome = gv('agente-nome').trim();
+  const cat = gv('agente-cat');
+  const desc = gv('agente-desc-atual').trim();
+  const forn = gv('agente-forn').trim();
+
+  if (!nome && !agenteFotoBase64) {
+    toastErr('Preencha o nome do produto ou adicione uma foto.');
+    return;
+  }
+
+  const btn = $('btn-agente-gerar');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:14px;height:14px"></div> Gerando com IA...'; }
+
+  const container = $('agente-results');
+  container.innerHTML = '<div class="ai-loading" style="text-align:center;padding:40px"><div class="spinner" style="width:24px;height:24px;display:inline-block;animation:pulse .8s ease-in-out infinite"></div><p style="margin-top:12px;color:var(--w3);font-size:13px">Gerando títulos e descrições otimizados...</p></div>';
+  st('agente-status', 'Gerando...');
+
+  try {
+    const results = await generateTitles({
+      base64:     agenteFotoBase64 || null,
+      mimeType:   agenteFotoMime || null,
+      categoria:  cat,
+      fornecedor: forn,
+      nomeAtual:  nome,
+      quantidade: agenteQtd,
+      descricao:  desc,
+    });
+    renderAgenteResults(results);
+    toastOk(`${results.length} sugestão(ões) gerada(s)!`);
+  } catch (err) {
+    container.innerHTML = `<div class="ai-error" style="text-align:center;padding:40px;color:var(--red)"><p style="font-size:14px;font-weight:600">Erro ao gerar</p><p style="font-size:13px;margin-top:8px">${san(err.message)}</p></div>`;
+    st('agente-status', 'Erro');
+    toastErr('Falha na geração com IA.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> Gerar com IA'; }
+  }
+}
+
+/** Copia conteúdo para clipboard */
+function copyToClipboard(index, descOnly = false) {
+  const results = getState().aiResults;
+  const r = results[index];
+  if (!r) return;
+  const text = descOnly ? (r.descricao || r.description || '') : (r.titulo || r.title || '');
+  navigator.clipboard.writeText(text).then(() => toastOk(descOnly ? 'Descrição copiada!' : 'Título copiado!')).catch(() => toastErr('Falha ao copiar.'));
 }
 
 // ── Exportar CSV (Vendas) ──────────────────────────────────
@@ -515,11 +577,38 @@ function initEvents() {
       case 'ajustarEstoque': ajustarEstoque(id, parseInt(delta)); break;
 
       // IA
+      case 'showIA': {
+        // Mostra painel de IA e foca no nome se vazio
+        showAiPanel();
+        if (!gv('fp-nome').trim()) {
+          $('fp-nome')?.focus();
+          toastErr('Preencha o nome ou categoria do produto.');
+        }
+        break;
+      }
       case 'generateAI':    handleGenerateAI(); break;
       case 'applyAITitle':  applyAITitle(parseInt(index)); break;
+      case 'applyAIDesc': {
+        e.stopPropagation();
+        applyAIDesc(parseInt(index));
+        break;
+      }
       case 'setAiQtd': {
         setState({ aiQtd: parseInt(qty) });
         $$('.ai-qty-btn').forEach(b => b.classList.toggle('active', b.dataset.qty === qty));
+        break;
+      }
+
+      // Agente IA
+      case 'generateAgente':  handleGenerateAgente(); break;
+      case 'removeAgenteImg': removeAgenteImg(); break;
+      case 'copyAITitle':     copyToClipboard(index); break;
+      case 'copyAIDesc':      copyToClipboard(index, true); break;
+      case 'setAgenteQtd': {
+        agenteQtd = parseInt(qty);
+        $$('.ai-qty-btn').forEach(b => {
+          if (b.closest('#agente-qty')) b.classList.toggle('active', b.dataset.qty === qty);
+        });
         break;
       }
 
@@ -556,7 +645,8 @@ function initEvents() {
     if (['fp-custo','fp-venda'].includes(id))  calcMargemProd();
     if (id === 'fv-prod')                      onProdSel();
     if (['fv-custo','fv-venda','fv-mkt','fv-status'].includes(id)) draftVenda();
-    if (id === 'search')         renderTableMain();
+    // Mostra painel de IA quando nome tem conteúdo (mínimo 3 chars)
+    if (id === 'fp-nome' && e.target.value.trim().length >= 3) showAiPanel();
     if (['cat-search','cat-cat'].includes(id)) renderCatalogo();
   });
 

@@ -12,7 +12,7 @@
 | **Dashboard** | KPIs em tempo real: receita, lucro, margem, total de vendas, gráficos, meta mensal |
 | **Vendas** | Registro com custo, preço, marketplace, status, foto e rascunho automático |
 | **Catálogo** | Produtos com foto, categoria, fornecedor, controle de estoque com alertas |
-| **IA de Títulos** | Upload de foto → Claude analisa → gera 2 ou 3 títulos + descrições otimizados |
+| **IA de Títulos** | Gera títulos e descrições via foto OU dados textuais. Painel dedicado na página "IA Agente" + integrado no modal de produto |
 | **Análise** | Desempenho por produto: lucro total, margem, custo e preço médio |
 | **Metas** | Meta mensal com barra de progresso e resumo financeiro |
 | **Histórico** | Log completo de todas as ações (criado / editado / removido) |
@@ -48,6 +48,7 @@ Dashboard-vendas/
 │   ├── pages/                          # Renderização por página
 │   │   ├── dashboard.js                # KPIs, tabela, gráficos, meta
 │   │   ├── catalogo.js                 # Grid de produtos
+│   │   ├── agente.js                   # Página Agente IA
 │   │   └── other.js                   # Análise, Metas, Histórico, Vendas
 │   │
 │   ├── components/                     # Componentes reutilizáveis

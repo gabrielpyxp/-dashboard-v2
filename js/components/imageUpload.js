@@ -59,3 +59,9 @@ export function removeImg() {
   const res = $('ai-results');
   if (res) res.innerHTML = '';
 }
+
+/** Mostra o painel de IA mesmo sem imagem (geração por dados textuais) */
+export function showAiPanel() {
+  const panel = $('ai-panel');
+  if (panel) panel.style.display = 'block';
+}
