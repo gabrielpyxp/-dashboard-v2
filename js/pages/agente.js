@@ -5,7 +5,7 @@ import { getState, setState } from '../state.js';
 import { san } from '../utils/security.js';
 import { $, $$, gv } from '../utils/dom.js';
 import { validateImage, toBase64 } from '../utils/security.js';
-import { toast, toastOk, toastErr } from './toast.js';
+import { toast, toastOk, toastErr } from '../components/toast.js';
 
 let agenteFotoBase64 = null;
 let agenteFotoMime = null;
