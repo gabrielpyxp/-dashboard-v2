@@ -1,0 +1,530 @@
+// js/app.js — Ponto de entrada da aplicação
+
+import { sb, MARKETPLACES, CATEGORIAS } from './config.js';
+import { getState, setState, subscribe } from './state.js';
+import { initAuthListener, login, signup, forgotPassword, logout } from './services/auth.service.js';
+import { loadVendas, createVenda, deleteVenda } from './services/vendas.service.js';
+import { loadProdutos, saveProduto, deleteProduto, ajustarEstoque } from './services/produtos.service.js';
+import { loadHistorico } from './services/historico.service.js';
+import { loadConfig, saveMeta } from './services/config.service.js';
+import { initRealtime } from './services/realtime.service.js';
+import { generateTitles } from './services/ai.service.js';
+import { renderDashboard, renderTableMain, renderMeta } from './pages/dashboard.js';
+import { renderCatalogo } from './pages/catalogo.js';
+import { renderAnalise, renderMetas, renderHistorico, renderVendasPage } from './pages/other.js';
+import { renderImgArea, handleFotoChange, removeImg } from './components/imageUpload.js';
+import { renderCharts } from './components/charts.js';
+import { toast, toastOk, toastErr } from './components/toast.js';
+import { $, $$, gv, sv, sh, st, show, hide, toggle, setMsg, clearMsg, btnLoading, clearInputs } from './utils/dom.js';
+import { todayISO, todayLong, fmt } from './utils/format.js';
+import { san, cap } from './utils/security.js';
+import { toBase64 } from './utils/security.js';
+import { saveDraft, loadDraft, clearDraft, hasDraft } from './utils/draft.js';
+
+// ── Boot ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  populateSelects();
+  initAuthListener(onLogin, onLogout);
+  initEvents();
+  initKeyboard();
+});
+
+// ── Reage a mudanças de dados ─────────────────────────────
+subscribe('sales', () => {
+  renderDashboard();
+  renderVendasPage();
+  renderAnalise();
+  renderMetas();
+});
+subscribe('produtos', () => {
+  renderCatalogo();
+});
+subscribe('hist', () => {
+  renderHistorico();
+});
+subscribe('meta', () => {
+  renderMeta();
+  renderMetas();
+});
+
+// ── Auth ──────────────────────────────────────────────────
+async function onLogin(user) {
+  $('auth-page')?.classList.remove('show');
+  $('sidebar').style.display  = 'flex';
+  $('main').style.display     = 'block';
+  $('mob-hdr').style.display  = 'flex';
+  $('ls')?.classList.add('hide');
+
+  // Usuário na sidebar
+  const email    = user.email || '';
+  const initials = email.charAt(0).toUpperCase();
+  st('u-av',    initials);
+  st('u-name',  email.split('@')[0]);
+  st('u-email', email);
+  st('today-lbl', todayLong());
+
+  // Carrega todos os dados em paralelo
+  await Promise.all([loadVendas(), loadProdutos(), loadHistorico(), loadConfig()]);
+  initRealtime();
+}
+
+function onLogout() {
+  $('ls')?.classList.add('hide');
+  $('auth-page')?.classList.add('show');
+  $('sidebar').style.display  = 'none';
+  $('main').style.display     = 'none';
+  $('mob-hdr').style.display  = 'none';
+  setState({ sales: [], produtos: [], hist: [], meta: 500 });
+}
+
+// ── Navegação ─────────────────────────────────────────────
+function navTo(page) {
+  $$('.page').forEach(p => p.classList.remove('active'));
+  $$('.nav-item').forEach(n => n.classList.remove('active'));
+  $('page-' + page)?.classList.add('active');
+  document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
+  if (window.innerWidth <= 768) toggleSidebar(false);
+
+  // Render sob demanda
+  const renders = {
+    dashboard: renderDashboard,
+    vendas:    renderVendasPage,
+    produtos:  renderCatalogo,
+    analise:   renderAnalise,
+    metas:     renderMetas,
+    historico: renderHistorico,
+  };
+  renders[page]?.();
+}
+
+function toggleSidebar(force) {
+  const sb2 = $('sidebar'), ov = $('overlay');
+  const open = force !== undefined ? force : !sb2.classList.contains('open');
+  sb2.classList.toggle('open', open);
+  ov?.classList.toggle('open', open);
+}
+
+// ── Modal Venda ───────────────────────────────────────────
+function openVendaModal() {
+  sv('fv-data', todayISO());
+  clearInputs('fv-prod', 'fv-custo', 'fv-venda');
+  $('lucro-prev').style.display = 'none';
+  $('sale-prev')?.classList.remove('show');
+
+  // Preenche datalist com produtos do catálogo
+  $('prod-list').innerHTML = getState().produtos
+    .map(p => `<option value="${san(p.nome)}">`)
+    .join('');
+
+  // Restaura rascunho
+  const uid = getState().user?.id;
+  const draft = loadDraft(uid);
+  const hasDr = !!(draft?.prod || draft?.custo || draft?.venda);
+  if (hasDr && draft) {
+    if (draft.prod)   sv('fv-prod',   draft.prod);
+    if (draft.custo)  sv('fv-custo',  draft.custo);
+    if (draft.venda)  sv('fv-venda',  draft.venda);
+    if (draft.mkt)    sv('fv-mkt',    draft.mkt);
+    if (draft.status) sv('fv-status', draft.status);
+    onProdSel();
+    calcLucro();
+  }
+  $('draft-note')?.classList.toggle('show', hasDr);
+  openModal('modal-venda');
+  setTimeout(() => $('fv-prod')?.focus(), 120);
+}
+
+function closeVendaModal() { closeModal('modal-venda'); }
+
+function onProdSel() {
+  draftVenda();
+  const name = gv('fv-prod').trim();
+  const p    = getState().produtos.find(x => x.nome === name);
+  if (p) {
+    if (!gv('fv-custo')) sv('fv-custo', p.custo);
+    if (!gv('fv-venda')) sv('fv-venda', p.venda);
+    calcLucro();
+    st('sp-name', p.nome);
+    st('sp-info', p.categoria + (p.fornecedor ? ' · ' + p.fornecedor : ''));
+    const img = $('sp-img');
+    if (img) { img.src = p.foto_url || ''; img.style.display = p.foto_url ? 'block' : 'none'; }
+    $('sale-prev')?.classList.add('show');
+  } else {
+    $('sale-prev')?.classList.remove('show');
+  }
+}
+
+function calcLucro() {
+  draftVenda();
+  const c = parseFloat(gv('fv-custo')) || 0;
+  const v = parseFloat(gv('fv-venda')) || 0;
+  const el = $('lucro-prev');
+  if (c > 0 && v > 0) {
+    const l = v - c, m = ((l / v) * 100).toFixed(1);
+    const sign = l < 0 ? '-' : '';
+    el.innerHTML = `Lucro: <strong>${sign}R$ ${Math.abs(l).toFixed(2).replace('.', ',')}</strong> &nbsp;·&nbsp; Margem: <strong>${m}%</strong>`;
+    el.style.display = 'block';
+    el.classList.toggle('loss', l < 0);
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function draftVenda() {
+  const uid = getState().user?.id;
+  saveDraft(uid, {
+    prod: gv('fv-prod'), custo: gv('fv-custo'),
+    venda: gv('fv-venda'), mkt: gv('fv-mkt'), status: gv('fv-status'),
+  });
+}
+
+async function handleSaveVenda() {
+  const produto = cap(san(gv('fv-prod').trim()), 150);
+  const custo   = parseFloat(gv('fv-custo'));
+  const venda   = parseFloat(gv('fv-venda'));
+  if (!produto || isNaN(custo) || isNaN(venda) || custo < 0 || venda < 0) {
+    toastErr('Preencha todos os campos obrigatórios.'); return;
+  }
+  const p = getState().produtos.find(x => x.nome === produto);
+  btnLoading('btn-sv', true, 'Salvando...');
+  const { error } = await createVenda({
+    data: gv('fv-data'), produto, custo, venda,
+    marketplace: gv('fv-mkt'), status: gv('fv-status'),
+    foto_url: p?.foto_url || null,
+  });
+  btnLoading('btn-sv', false, 'Salvar');
+  if (error) { toastErr('Erro: ' + error.message); return; }
+  clearDraft(getState().user?.id);
+  closeVendaModal();
+  toastOk('Venda registrada!');
+}
+
+// ── Modal Produto ─────────────────────────────────────────
+function openProdModal(editId) {
+  setState({ fotoFile: null, editImgUrl: null, fotoBase64: null, fotoMimeType: null, aiResults: [] });
+  renderImgArea(null);
+  sh('ai-results', '');
+  $('ai-panel').style.display  = 'none';
+  $('prod-mprev').style.display = 'none';
+
+  $('prod-mtitle').textContent = editId ? 'Editar Produto' : 'Cadastrar Produto';
+  sv('fp-id', editId || '');
+
+  if (editId) {
+    const p = getState().produtos.find(x => x.id === editId);
+    if (p) {
+      sv('fp-nome',  p.nome);
+      sv('fp-desc',  p.descricao || '');
+      sv('fp-cat',   p.categoria || '');
+      sv('fp-forn',  p.fornecedor || '');
+      sv('fp-custo', p.custo);
+      sv('fp-venda', p.venda);
+      sv('fp-est',   p.estoque);
+      sv('fp-min',   p.estoque_min);
+      sv('fp-obs',   p.obs || '');
+      if (p.foto_url) {
+        setState({ editImgUrl: p.foto_url });
+        renderImgArea(p.foto_url);
+        $('ai-panel').style.display = 'block';
+      }
+      calcMargemProd();
+    }
+  } else {
+    clearInputs('fp-nome','fp-desc','fp-forn','fp-obs','fp-custo','fp-venda');
+    sv('fp-est', '0'); sv('fp-min', '2');
+  }
+  openModal('modal-prod');
+  setTimeout(() => $('fp-nome')?.focus(), 120);
+}
+
+function closeProdModal() { closeModal('modal-prod'); }
+
+function calcMargemProd() {
+  const c  = parseFloat(gv('fp-custo')) || 0;
+  const v  = parseFloat(gv('fp-venda')) || 0;
+  const el = $('prod-mprev');
+  if (!el) return;
+  if (c > 0 && v > 0) {
+    const l = v - c, m = ((l / v) * 100).toFixed(1);
+    const sign = l < 0 ? '-' : '';
+    el.innerHTML = `Lucro unit.: <strong>${sign}R$ ${Math.abs(l).toFixed(2).replace('.', ',')}</strong> &nbsp;·&nbsp; Margem: <strong>${m}%</strong>`;
+    el.style.display = 'block';
+    el.classList.toggle('loss', l < 0);
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+async function handleSaveProd() {
+  const nome  = cap(san(gv('fp-nome').trim()), 150);
+  const custo = parseFloat(gv('fp-custo'));
+  const venda = parseFloat(gv('fp-venda'));
+  if (!nome || isNaN(custo) || isNaN(venda)) {
+    toastErr('Preencha nome, custo e preço de venda.'); return;
+  }
+  const editId = gv('fp-id') || null;
+  const { fotoFile, editImgUrl } = getState();
+
+  btnLoading('btn-sp', true, 'Salvando...');
+  $('uprog').style.display = fotoFile ? 'flex' : 'none';
+
+  const { error } = await saveProduto(
+    { nome, descricao: gv('fp-desc'), categoria: gv('fp-cat'),
+      fornecedor: gv('fp-forn'), custo, venda,
+      estoque: parseInt(gv('fp-est')) || 0,
+      estoqueMin: parseInt(gv('fp-min')) || 0,
+      obs: gv('fp-obs') },
+    fotoFile, editImgUrl, editId
+  );
+
+  $('uprog').style.display = 'none';
+  btnLoading('btn-sp', false, 'Salvar Produto');
+
+  if (error) { toastErr(typeof error === 'string' ? error : 'Erro ao salvar produto.'); return; }
+  toastOk(editId ? 'Produto atualizado!' : 'Produto cadastrado!');
+  closeProdModal();
+}
+
+// ── IA — geração de títulos ───────────────────────────────
+async function handleGenerateAI() {
+  const { fotoBase64, fotoMimeType, aiQtd } = getState();
+  const btn = $('btn-generate-ai');
+  if (btn) { btn.disabled = true; btn.textContent = '✦ Gerando...'; }
+
+  sh('ai-results', '<div class="ai-loading"><div class="spinner"></div>Analisando produto com IA...</div>');
+
+  try {
+    const results = await generateTitles({
+      base64:    fotoBase64  || null,
+      mimeType:  fotoMimeType || null,
+      categoria:  gv('fp-cat'),
+      fornecedor: gv('fp-forn'),
+      nomeAtual:  gv('fp-nome'),
+      quantidade: aiQtd,
+    });
+
+    setState({ aiResults: results });
+
+    sh('ai-results', results.map((r, i) => `
+      <div class="ai-card" data-action="applyAITitle" data-index="${i}">
+        <div class="ai-card-num">Opção ${i + 1}</div>
+        <div class="ai-card-title">${san(r.titulo)}</div>
+        ${r.descricao ? `<div class="ai-card-desc">${san(r.descricao)}</div>` : ''}
+        <div class="ai-apply">↩ Usar este título</div>
+      </div>
+    `).join(''));
+  } catch (err) {
+    sh('ai-results', `<div class="ai-error">Erro: ${san(err.message)}</div>`);
+    toastErr('Não foi possível gerar os títulos.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✦ Gerar com IA'; }
+  }
+}
+
+function applyAITitle(index) {
+  const r = getState().aiResults[index];
+  if (!r) return;
+  sv('fp-nome', r.titulo);
+  if (r.descricao) sv('fp-desc', r.descricao);
+  toastOk('Título aplicado!');
+}
+
+// ── Exportar CSV ──────────────────────────────────────────
+function exportCSV() {
+  const { sales } = getState();
+  if (!sales.length) { toastErr('Nenhuma venda para exportar.'); return; }
+  const h = 'Data,Produto,Custo,Venda,Lucro,Margem,Marketplace,Status\n';
+  const r = sales.map(s =>
+    [s.data, s.produto, s.custo, s.venda,
+     (+s.lucro).toFixed(2), (+s.margem || 0).toFixed(1) + '%',
+     s.marketplace, s.status].join(',')
+  ).join('\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob(['\uFEFF' + h + r], { type: 'text/csv;charset=utf-8;' })),
+    download: `revendas_${todayISO()}.csv`,
+  });
+  a.click();
+  toastOk('CSV exportado!');
+}
+
+// ── Auth forms ────────────────────────────────────────────
+function switchTab(tab) {
+  const isFg = tab === 'forgot';
+  $('form-login').style.display  = tab === 'login'  ? '' : 'none';
+  $('form-signup').style.display = tab === 'signup' ? '' : 'none';
+  $('form-forgot').style.display = isFg ? '' : 'none';
+  $('auth-tabs').style.display   = isFg ? 'none' : '';
+  $('tab-login')?.classList.toggle('active',  tab === 'login');
+  $('tab-signup')?.classList.toggle('active', tab === 'signup');
+  const titles = {
+    login:  ['Bem-vindo de volta',  'Entre na sua conta para continuar'],
+    signup: ['Criar conta',         'Cadastre-se e comece agora'],
+    forgot: ['Recuperar senha',     ''],
+  };
+  const [t, s] = titles[tab] || [];
+  if (t) st('auth-title', t);
+  if (s !== undefined) st('auth-sub', s);
+  clearMsg('l-err', 's-err', 'f-err', 's-ok', 'f-ok');
+}
+
+function togglePass(inputId, btn) {
+  const inp = $(inputId);
+  if (!inp) return;
+  const show_ = inp.type === 'password';
+  inp.type = show_ ? 'text' : 'password';
+  btn.innerHTML = show_
+    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+}
+
+// ── Event delegation central ──────────────────────────────
+function initEvents() {
+  document.addEventListener('click', async e => {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const { action, id, page, tab, input, delta, index, qty, modal } = el.dataset;
+
+    switch (action) {
+      // Auth
+      case 'doLogin':    { const { error } = await login(gv('l-email').trim().toLowerCase(), gv('l-senha')); if (error) setMsg('l-err', error); break; }
+      case 'doSignup':   { const { error } = await signup(gv('s-email').trim().toLowerCase(), gv('s-senha'), gv('s-conf')); if (error) setMsg('s-err', error); else setMsg('s-ok', 'Conta criada! Verifique seu email.', 'ok'); break; }
+      case 'doForgot':   { const { error } = await forgotPassword(gv('f-email').trim().toLowerCase()); if (error) setMsg('f-err', error); else setMsg('f-ok', 'Link enviado! Verifique seu email.', 'ok'); break; }
+      case 'doSignOut':  logout(getState().rtsubs); break;
+      case 'switchTab':  switchTab(tab); break;
+      case 'showForgot': switchTab('forgot'); break;
+      case 'togglePass': togglePass(input, el); break;
+
+      // Nav
+      case 'navTo':        navTo(page); break;
+      case 'toggleSidebar': toggleSidebar(); break;
+
+      // Vendas
+      case 'openVendaModal':  openVendaModal(); break;
+      case 'closeVendaModal': closeVendaModal(); break;
+      case 'saveVenda':       handleSaveVenda(); break;
+      case 'deleteVenda': {
+        if (!confirm('Remover esta venda?')) break;
+        const { error } = await deleteVenda(id);
+        if (error) toastErr('Erro ao remover venda.');
+        else toastOk('Venda removida.');
+        break;
+      }
+
+      // Produto
+      case 'openProdModal':  openProdModal(id || null); break;
+      case 'closeProdModal': closeProdModal(); break;
+      case 'saveProd':       handleSaveProd(); break;
+      case 'removeImg':      removeImg(); break;
+      case 'deleteProd': {
+        if (!confirm('Remover este produto do catálogo?')) break;
+        const { error } = await deleteProduto(id);
+        if (error) toastErr('Erro ao remover produto.');
+        else toastOk('Produto removido.');
+        break;
+      }
+      case 'ajustarEstoque': ajustarEstoque(id, parseInt(delta)); break;
+
+      // IA
+      case 'generateAI':    handleGenerateAI(); break;
+      case 'applyAITitle':  applyAITitle(parseInt(index)); break;
+      case 'setAiQtd': {
+        setState({ aiQtd: parseInt(qty) });
+        $$('.ai-qty-btn').forEach(b => b.classList.toggle('active', b.dataset.qty === qty));
+        break;
+      }
+
+      // Meta
+      case 'promptMeta': {
+        const v = prompt('Nova meta de lucro mensal (R$):', getState().meta);
+        const n = parseFloat(v);
+        if (!isNaN(n) && n > 0) { await saveMeta(n); toastOk('Meta atualizada!'); }
+        break;
+      }
+      case 'saveMeta2': {
+        const n = parseFloat($('meta-inp')?.value);
+        if (!isNaN(n) && n > 0) { await saveMeta(n); toastOk('Meta atualizada!'); }
+        break;
+      }
+
+      // Misc
+      case 'exportCSV':   exportCSV(); break;
+      case 'closeModal':  closeModal(modal); break;
+    }
+  });
+
+  // change — file input e selects
+  document.addEventListener('change', async e => {
+    const { action } = e.target.dataset;
+    if (action === 'fotoChange') await handleFotoChange(e.target);
+  });
+
+  // input — cálculos em tempo real
+  document.addEventListener('input', e => {
+    const id = e.target.id;
+    if (['fv-custo','fv-venda'].includes(id))  calcLucro();
+    if (['fp-custo','fp-venda'].includes(id))  calcMargemProd();
+    if (id === 'fv-prod')                      onProdSel();
+    if (['fv-custo','fv-venda','fv-mkt','fv-status'].includes(id)) draftVenda();
+    if (id === 'search')    renderTableMain();
+  });
+
+  // Fecha modal ao clicar no overlay
+  $$('.movl').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.classList.remove('open');
+    });
+  });
+}
+
+function initKeyboard() {
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') $$('.movl.open').forEach(m => m.classList.remove('open'));
+    if (e.key === 'Enter' && $('auth-page')?.classList.contains('show')) {
+      if ($('form-login').style.display  !== 'none') document.querySelector('[data-action="doLogin"]')?.click();
+      else if ($('form-signup').style.display !== 'none') document.querySelector('[data-action="doSignup"]')?.click();
+      else if ($('form-forgot').style.display !== 'none') document.querySelector('[data-action="doForgot"]')?.click();
+    }
+  });
+}
+
+// ── Helpers modais ────────────────────────────────────────
+const openModal  = id => $(id)?.classList.add('open');
+const closeModal = id => $(id)?.classList.remove('open');
+
+// ── Popula selects dinamicamente ──────────────────────────
+function populateSelects() {
+  const mkts = ['', ...MARKETPLACES];
+  const addOpts = (id, opts, withEmpty = false) => {
+    const el = $(id);
+    if (!el) return;
+    el.innerHTML = (withEmpty ? ['<option value="">Todos marketplaces</option>'] : [])
+      .concat(MARKETPLACES.map(m => `<option>${m}</option>`)).join('');
+  };
+
+  const addCatOpts = (id, withEmpty = false) => {
+    const el = $(id);
+    if (!el) return;
+    el.innerHTML = (withEmpty ? ['<option value="">Todas categorias</option>'] : [])
+      .concat(CATEGORIAS.map(c => `<option>${c}</option>`)).join('');
+  };
+
+  // Modal venda
+  const mktSel = $('fv-mkt');
+  if (mktSel) mktSel.innerHTML = MARKETPLACES.map(m => `<option>${m}</option>`).join('');
+
+  // Filtro vendas
+  const mktFilter = $('filter-mkt');
+  if (mktFilter) mktFilter.innerHTML =
+    '<option value="">Todos marketplaces</option>' +
+    MARKETPLACES.map(m => `<option>${m}</option>`).join('');
+
+  // Categoria produto
+  const catSel = $('fp-cat');
+  if (catSel) catSel.innerHTML = CATEGORIAS.map(c => `<option>${c}</option>`).join('');
+
+  // Filtro catálogo
+  const catFilter = $('cat-cat');
+  if (catFilter) catFilter.innerHTML =
+    '<option value="">Todas categorias</option>' +
+    CATEGORIAS.map(c => `<option>${c}</option>`).join('');
+}

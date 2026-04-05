@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="description" content="Revendê — Dashboard de controle de revendas">
+  <title>Revendê — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700;800;900&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Dependências globais (UMD, carregadas antes dos módulos ES) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+
+<!-- ── Loading ─────────────────────────────────────────── -->
+<div id="ls" role="status" aria-label="Carregando">
+  <div class="spinner"></div>
+  <span style="font-size:13px;color:var(--w3)">Carregando...</span>
+</div>
+
+<!-- ── Auth ────────────────────────────────────────────── -->
+<div id="auth-page" role="main">
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">
+        <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      </div>
+      <div class="auth-logo-txt">Rev<span>end</span>ê</div>
+    </div>
+
+    <div class="auth-card">
+      <h1 class="auth-title" id="auth-title">Bem-vindo de volta</h1>
+      <p  class="auth-sub"   id="auth-sub">Entre na sua conta para continuar</p>
+
+      <div class="auth-tabs" id="auth-tabs" role="tablist">
+        <div class="auth-tab active" id="tab-login"  data-action="switchTab" data-tab="login"  role="tab">Entrar</div>
+        <div class="auth-tab"        id="tab-signup" data-action="switchTab" data-tab="signup" role="tab">Cadastrar</div>
+      </div>
+
+      <!-- Entrar -->
+      <div id="form-login">
+        <div class="afield">
+          <label for="l-email">Email</label>
+          <input type="email" id="l-email" class="ainp" placeholder="seu@email.com" autocomplete="email">
+        </div>
+        <div class="afield">
+          <label for="l-senha">Senha</label>
+          <div class="pass-wrap">
+            <input type="password" id="l-senha" class="ainp" placeholder="••••••••" autocomplete="current-password" style="padding-right:42px">
+            <button class="pass-toggle" data-action="togglePass" data-input="l-senha" type="button" aria-label="Mostrar senha">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <span class="forgot-link" data-action="showForgot">Esqueci minha senha</span>
+        </div>
+        <div class="auth-err" id="l-err" role="alert"></div>
+        <button class="auth-btn" id="btn-login" data-action="doLogin">Entrar</button>
+      </div>
+
+      <!-- Cadastrar -->
+      <div id="form-signup" style="display:none">
+        <div class="afield">
+          <label for="s-email">Email</label>
+          <input type="email" id="s-email" class="ainp" placeholder="seu@email.com" autocomplete="email">
+        </div>
+        <div class="afield">
+          <label for="s-senha">Senha</label>
+          <div class="pass-wrap">
+            <input type="password" id="s-senha" class="ainp" placeholder="mínimo 6 caracteres" autocomplete="new-password" style="padding-right:42px">
+            <button class="pass-toggle" data-action="togglePass" data-input="s-senha" type="button" aria-label="Mostrar senha">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="afield">
+          <label for="s-conf">Confirmar senha</label>
+          <input type="password" id="s-conf" class="ainp" placeholder="repita a senha" autocomplete="new-password">
+        </div>
+        <div class="auth-err" id="s-err" role="alert"></div>
+        <div class="auth-ok"  id="s-ok"  role="status"></div>
+        <button class="auth-btn" id="btn-signup" data-action="doSignup">Criar conta</button>
+      </div>
+
+      <!-- Esqueci senha -->
+      <div id="form-forgot" style="display:none">
+        <p style="font-size:13px;color:var(--w3);margin-bottom:20px;line-height:1.6">
+          Digite seu email e enviaremos um link para redefinir sua senha.
+        </p>
+        <div class="afield">
+          <label for="f-email">Email</label>
+          <input type="email" id="f-email" class="ainp" placeholder="seu@email.com" autocomplete="email">
+        </div>
+        <div class="auth-err" id="f-err" role="alert"></div>
+        <div class="auth-ok"  id="f-ok"  role="status"></div>
+        <button class="auth-btn" id="btn-forgot" data-action="doForgot">Enviar link</button>
+        <div style="text-align:center;margin-top:14px">
+          <span class="forgot-link" data-action="switchTab" data-tab="login">← Voltar para login</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="auth-footer">Seus dados são privados e acessíveis<br>apenas pela sua conta.</p>
+  </div>
+</div>
+
+<!-- ── Mobile header ───────────────────────────────────── -->
+<header class="mob-hdr" id="mob-hdr" style="display:none" role="banner">
+  <div class="mob-logo">Rev<span>end</span>ê</div>
+  <button class="hamburger" data-action="toggleSidebar" aria-label="Abrir menu" aria-expanded="false">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</header>
+<div class="sb-overlay" id="overlay" data-action="toggleSidebar" aria-hidden="true"></div>
+
+<!-- ── Sidebar ─────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar" style="display:none" aria-label="Menu lateral">
+  <div class="sb-logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    </div>
+    <div class="logo-txt">Rev<span>end</span>ê</div>
+  </div>
+
+  <div class="nav-lbl">Menu</div>
+  <nav role="navigation">
+    <div class="nav-item active" data-action="navTo" data-page="dashboard" tabindex="0" role="menuitem">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" data-action="navTo" data-page="vendas" tabindex="0" role="menuitem">
+      <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      Vendas
+    </div>
+    <div class="nav-item" data-action="navTo" data-page="produtos" tabindex="0" role="menuitem">
+      <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Catálogo
+    </div>
+    <div class="nav-item" data-action="navTo" data-page="analise" tabindex="0" role="menuitem">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Análise
+    </div>
+    <div class="nav-item" data-action="navTo" data-page="metas" tabindex="0" role="menuitem">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      Metas
+    </div>
+    <div class="nav-item" data-action="navTo" data-page="historico" tabindex="0" role="menuitem">
+      <svg viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Histórico
+    </div>
+  </nav>
+
+  <div class="sb-bottom">
+    <div class="sb-kpi">
+      <div class="sb-kpi-lbl">Lucro acumulado</div>
+      <div class="sb-kpi-val" id="sb-lucro">R$ 0,00</div>
+    </div>
+    <div class="sb-user">
+      <div class="u-av" id="u-av" aria-hidden="true">?</div>
+      <div class="u-info">
+        <div class="u-name"  id="u-name">—</div>
+        <div class="u-email" id="u-email">—</div>
+      </div>
+      <button class="btn-so" data-action="doSignOut" title="Sair da conta" aria-label="Sair">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main ─────────────────────────────────────────────── -->
+<main class="main" id="main" style="display:none" role="main">
+
+  <!-- Dashboard -->
+  <div class="page active" id="page-dashboard">
+    <div class="ph">
+      <div>
+        <h1 class="ptitle">Dashboard</h1>
+        <p class="psub" id="today-lbl"></p>
+      </div>
+      <div class="ha">
+        <button class="btn btn-g" data-action="exportCSV">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <button class="btn btn-p" data-action="openVendaModal">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova Venda
+        </button>
+      </div>
+    </div>
+
+    <div class="kgrid">
+      <div class="kcard g"><div class="kicon g"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="klbl">Receita Total</div><div class="kval" id="k-rec">R$ 0</div><span class="kbadge nt" id="k-rec-s">0 vendas</span></div>
+      <div class="kcard g"><div class="kicon g"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div><div class="klbl">Lucro Líquido</div><div class="kval green" id="k-luc">R$ 0</div><span class="kbadge up" id="k-luc-s">↑ R$ 0</span></div>
+      <div class="kcard d"><div class="kicon w"><svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div><div class="klbl">Margem Média</div><div class="kval" id="k-marg">0%</div><span class="kbadge nt">sobre vendas</span></div>
+      <div class="kcard d"><div class="kicon w"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg></div><div class="klbl">Total Vendas</div><div class="kval" id="k-tot">0</div><span class="kbadge nt">registradas</span></div>
+    </div>
+
+    <div class="cgrid">
+      <div class="card"><div class="chdr"><span class="ctitle">Lucro por venda</span><span class="ctag">Últimas 10</span></div><div style="position:relative;height:200px"><canvas id="chartBar"></canvas></div></div>
+      <div class="card"><div class="chdr"><span class="ctitle">Distribuição de Margem</span><span class="ctag">Geral</span></div><div style="position:relative;height:200px"><canvas id="chartDoughnut"></canvas></div></div>
+    </div>
+
+    <div class="twrap">
+      <div class="ttoolbar">
+        <span class="ctitle">Histórico recente</span>
+        <div class="swrap">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="sinp" id="search" placeholder="Buscar produto..." aria-label="Buscar venda">
+        </div>
+      </div>
+      <div class="tscroll">
+        <table><thead><tr><th>Data</th><th>Produto</th><th>Custo</th><th>Venda</th><th>Lucro</th><th>Margem</th><th>Marketplace</th><th>Status</th><th></th></tr></thead>
+        <tbody id="tbody-main"></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="chdr">
+        <span class="ctitle">Meta mensal de lucro</span>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:13px;color:var(--green);font-weight:700" id="meta-pct-lbl">0%</span>
+          <button class="btn btn-g" style="padding:6px 12px;font-size:12px" data-action="promptMeta">Alterar meta</button>
+        </div>
+      </div>
+      <div class="mtrack"><div class="mfill" id="meta-bar" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--w3);flex-wrap:wrap;gap:4px">
+        <span id="meta-luc-lbl">R$ 0,00 conquistado</span>
+        <span>Meta: <span style="color:var(--white)" id="meta-goal-lbl">R$ 500,00</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vendas -->
+  <div class="page" id="page-vendas">
+    <div class="ph">
+      <div><h1 class="ptitle">Vendas</h1><p class="psub">Todas as suas vendas</p></div>
+      <div class="ha"><button class="btn btn-p" data-action="openVendaModal"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nova Venda</button></div>
+    </div>
+    <div class="twrap">
+      <div class="ttoolbar">
+        <span class="ctitle">Todas as vendas</span>
+        <select class="sinp noi" id="filter-mkt" style="max-width:200px" aria-label="Filtrar por marketplace"></select>
+      </div>
+      <div class="tscroll">
+        <table><thead><tr><th>Data</th><th>Produto</th><th>Custo</th><th>Venda</th><th>Lucro</th><th>Margem</th><th>Marketplace</th><th>Status</th><th></th></tr></thead>
+        <tbody id="tbody-vendas"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Catálogo -->
+  <div class="page" id="page-produtos">
+    <div class="ph">
+      <div><h1 class="ptitle">Catálogo</h1><p class="psub">Seus produtos cadastrados</p></div>
+      <div class="ha"><button class="btn btn-p" data-action="openProdModal"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novo Produto</button></div>
+    </div>
+    <div class="kgrid" style="margin-bottom:18px">
+      <div class="kcard g"><div class="kicon g"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><div class="klbl">Cadastrados</div><div class="kval" id="cat-tot">0</div></div>
+      <div class="kcard d"><div class="kicon w"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div class="klbl">Em estoque</div><div class="kval" id="cat-est">0</div></div>
+      <div class="kcard d"><div class="kicon w"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="klbl">Zerados</div><div class="kval" id="cat-zer">0</div></div>
+      <div class="kcard g"><div class="kicon g"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="klbl">Valor em estoque</div><div class="kval" id="cat-val">R$ 0</div></div>
+    </div>
+    <div class="twrap">
+      <div class="ttoolbar">
+        <span class="ctitle">Produtos</span>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div class="swrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="sinp" id="cat-search" placeholder="Buscar..." aria-label="Buscar produto"></div>
+          <select class="sinp noi" id="cat-cat" style="max-width:180px" aria-label="Filtrar por categoria"></select>
+        </div>
+      </div>
+      <div class="pgrid" id="prod-grid"></div>
+    </div>
+  </div>
+
+  <!-- Análise -->
+  <div class="page" id="page-analise">
+    <div class="ph"><div><h1 class="ptitle">Análise</h1><p class="psub">Desempenho agrupado por produto</p></div></div>
+    <div class="twrap">
+      <div class="tscroll">
+        <table><thead><tr><th>Produto</th><th>Vendas</th><th>Custo médio</th><th>Preço médio</th><th>Lucro total</th><th>Margem</th></tr></thead>
+        <tbody id="tbody-analise"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metas -->
+  <div class="page" id="page-metas">
+    <div class="ph"><div><h1 class="ptitle">Metas</h1><p class="psub">Seus objetivos financeiros</p></div></div>
+    <div class="twocol">
+      <div class="card">
+        <div class="chdr"><span class="ctitle">Meta de lucro mensal</span></div>
+        <div style="font-family:var(--fd);font-size:42px;font-weight:900;color:var(--green);letter-spacing:-2px;margin:4px 0 6px" id="meta-goal-big">R$ 500</div>
+        <div class="mtrack"><div class="mfill" id="meta-bar2" style="width:0%"></div></div>
+        <div style="font-size:12.5px;color:var(--w3);margin-bottom:20px"><span id="meta-pct2" style="color:var(--green);font-weight:700">0%</span> concluída</div>
+        <div class="fgrp"><label class="flbl" for="meta-inp">Nova meta (R$)</label><input type="number" id="meta-inp" class="fctl" placeholder="500" min="1"></div>
+        <button class="btn btn-p" style="width:100%" data-action="saveMeta2">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Salvar Meta
+        </button>
+      </div>
+      <div class="card"><div class="chdr"><span class="ctitle">Resumo geral</span></div><div id="metas-summ"></div></div>
+    </div>
+  </div>
+
+  <!-- Histórico -->
+  <div class="page" id="page-historico">
+    <div class="ph"><div><h1 class="ptitle">Histórico</h1><p class="psub">Log completo de todas as ações</p></div></div>
+    <div class="card">
+      <div class="chdr">
+        <span class="ctitle">Atividade recente</span>
+        <span class="ctag" id="hist-count" aria-live="polite">0 registros</span>
+      </div>
+      <div class="hlist" id="hist-list"><div class="hist-empty">Nenhuma atividade ainda.</div></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Modal: Nova Venda ────────────────────────────────── -->
+<div class="movl" id="modal-venda" role="dialog" aria-modal="true" aria-labelledby="mv-title">
+  <div class="modal">
+    <h2 class="mtitle" id="mv-title">Registrar Venda</h2>
+
+    <div class="fgrp">
+      <label class="flbl" for="fv-prod">Produto *</label>
+      <input type="text" id="fv-prod" class="fctl" placeholder="Digite ou selecione do catálogo" list="prod-list" autocomplete="off">
+      <datalist id="prod-list"></datalist>
+    </div>
+
+    <div class="sprev" id="sale-prev">
+      <img class="spimg" id="sp-img" src="" alt="" style="display:none">
+      <div><div class="spname" id="sp-name"></div><div class="spinfo" id="sp-info"></div></div>
+    </div>
+
+    <div class="frow">
+      <div class="fgrp"><label class="flbl" for="fv-custo">Custo (R$) *</label><input type="number" id="fv-custo" class="fctl" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="fgrp"><label class="flbl" for="fv-venda">Preço de venda (R$) *</label><input type="number" id="fv-venda" class="fctl" placeholder="0,00" step="0.01" min="0"></div>
+    </div>
+    <div id="lucro-prev" class="lprev"></div>
+    <div class="frow">
+      <div class="fgrp"><label class="flbl" for="fv-mkt">Marketplace</label><select id="fv-mkt" class="fctl"></select></div>
+      <div class="fgrp"><label class="flbl" for="fv-data">Data</label><input type="date" id="fv-data" class="fctl"></div>
+    </div>
+    <div class="fgrp">
+      <label class="flbl" for="fv-status">Status</label>
+      <select id="fv-status" class="fctl">
+        <option value="lucro">Concluída</option>
+        <option value="pendente">Pendente</option>
+        <option value="prejuizo">Prejuízo</option>
+      </select>
+    </div>
+    <div class="draft-note" id="draft-note">💾 Rascunho restaurado automaticamente.</div>
+    <div class="mfoot">
+      <button class="btn btn-g" data-action="closeVendaModal">Cancelar</button>
+      <button class="btn btn-p" id="btn-sv" data-action="saveVenda">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Produto ───────────────────────────────────── -->
+<div class="movl" id="modal-prod" role="dialog" aria-modal="true" aria-labelledby="mp-title">
+  <div class="modal" style="max-width:500px">
+    <h2 class="mtitle" id="prod-mtitle">Cadastrar Produto</h2>
+    <input type="hidden" id="fp-id">
+
+    <!-- Upload foto -->
+    <div class="fgrp">
+      <label class="flbl">Foto do produto</label>
+      <div class="iarea" id="img-area">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <div class="itxt">Clique para adicionar foto</div>
+        <div class="isub">JPG, JPEG, PNG ou WebP — máx 3MB</div>
+        <input type="file" id="fp-foto" accept="image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+               data-action="fotoChange" class="hidden-input" aria-label="Selecionar foto do produto">
+      </div>
+    </div>
+
+    <!-- Painel IA -->
+    <div id="ai-panel" style="display:none">
+      <div class="ai-panel">
+        <div class="ai-panel-hdr">
+          <span>Quantos títulos?</span>
+          <div class="ai-qty-wrap">
+            <button class="ai-qty-btn active" data-action="setAiQtd" data-qty="3">3</button>
+            <button class="ai-qty-btn"        data-action="setAiQtd" data-qty="2">2</button>
+          </div>
+          <button class="btn-ai" id="btn-generate-ai" data-action="generateAI">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            ✦ Gerar com IA
+          </button>
+        </div>
+        <div id="ai-results"></div>
+      </div>
+    </div>
+
+    <div class="fgrp"><label class="flbl" for="fp-nome">Nome *</label><input type="text" id="fp-nome" class="fctl" placeholder="Ex: Fone Bluetooth JBL T510"></div>
+    <div class="fgrp"><label class="flbl" for="fp-desc">Descrição</label><input type="text" id="fp-desc" class="fctl" placeholder="Destaque o diferencial do produto"></div>
+    <div class="frow">
+      <div class="fgrp"><label class="flbl" for="fp-cat">Categoria</label><select id="fp-cat" class="fctl"></select></div>
+      <div class="fgrp"><label class="flbl" for="fp-forn">Fornecedor</label><input type="text" id="fp-forn" class="fctl" placeholder="Aliexpress, atacado..."></div>
+    </div>
+    <div class="frow">
+      <div class="fgrp"><label class="flbl" for="fp-custo">Custo (R$) *</label><input type="number" id="fp-custo" class="fctl" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="fgrp"><label class="flbl" for="fp-venda">Venda (R$) *</label><input type="number" id="fp-venda" class="fctl" placeholder="0,00" step="0.01" min="0"></div>
+    </div>
+    <div id="prod-mprev" class="lprev"></div>
+    <div class="frow">
+      <div class="fgrp"><label class="flbl" for="fp-est">Estoque atual</label><input type="number" id="fp-est" class="fctl" placeholder="0" min="0" value="0"></div>
+      <div class="fgrp"><label class="flbl" for="fp-min">Mínimo (alerta)</label><input type="number" id="fp-min" class="fctl" placeholder="2" min="0" value="2"></div>
+    </div>
+    <div class="fgrp"><label class="flbl" for="fp-obs">Observações</label><input type="text" id="fp-obs" class="fctl" placeholder="Link, variações, notas..."></div>
+
+    <div id="uprog"><div class="spinner"></div> Enviando imagem...</div>
+
+    <div class="mfoot">
+      <button class="btn btn-g" data-action="closeProdModal">Cancelar</button>
+      <button class="btn btn-p" id="btn-sp" data-action="saveProd">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Salvar Produto
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ────────────────────────────────────────────── -->
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <svg id="toast-icon" viewBox="0 0 24 24" stroke="var(--green)"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toast-msg"></span>
+</div>
+
+</body>
+</html>
