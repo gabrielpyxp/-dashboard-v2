@@ -549,6 +549,15 @@ tbody tr:hover { background: rgba(245, 197, 24, .03); }
   width: 100%; height: 140px; object-fit: cover;
   background: var(--surface); display: block;
 }
+.pcard-img-ph {
+  width: 100%; height: 140px;
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+}
+.pcard-img-ph svg {
+  width: 36px; height: 36px; stroke: var(--w4); fill: none;
+  stroke-width: 1.5;
+}
 
 .pcard-body { padding: 14px 16px; }
 
