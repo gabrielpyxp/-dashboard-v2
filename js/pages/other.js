@@ -7,8 +7,40 @@ import { sh, st, setStyle } from '../utils/dom.js';
 import { clamp } from '../utils/format.js';
 import { rowHTML, emptyRow } from './dashboard.js';
 
-// ── Análise ──────────────────────────────────────────────
-export function renderAnalise() {
+// ── Metas ─────────────────────────────────────────────────
+/**
+ * Calcula métricas de um mês específico (YYYY-MM).
+ */
+function mesMetrics(ym) {
+  const { sales } = getState();
+  const mSales = sales.filter(s => {
+    if (!s.data) return false;
+    return s.data.slice(0, 7) === ym; // "YYYY-MM"
+  });
+  const rec   = mSales.reduce((a, s) => a + +s.venda, 0);
+  const cus   = mSales.reduce((a, s) => a + +s.custo, 0);
+  const luc   = mSales.reduce((a, s) => a + +s.lucro, 0);
+  const count = mSales.length;
+  return { rec, cus, luc, count };
+}
+
+/**
+ * Calcula a variação percentual entre dois valores.
+ */
+function pctDiff(novo, antigo) {
+  if (antigo === 0) return novo === 0 ? 0 : 100;
+  return ((novo - antigo) / antigo) * 100;
+}
+
+/**
+ * Nome legível do mês a partir de "YYYY-MM".
+ */
+function nomeMes(ym) {
+  if (!ym) return '—';
+  const [an, ms] = ym.split('-');
+  const d = new Date(an, parseInt(ms) - 1, 1);
+  return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+}
   const { sales } = getState();
   const map = {};
   sales.forEach(s => {
@@ -86,10 +118,40 @@ export function renderHistorico() {
 }
 
 // ── Vendas page ────────────────────────────────────────────
+/**
+ * Filtra vendas por marketplace e faixa de datas.
+ * Lê os valores dos inputs filter-mkt, filter-date-start, filter-date-end.
+ */
 export function renderVendasPage() {
-  const mkt = document.getElementById('filter-mkt')?.value ?? '';
-  const d   = mkt ? getState().sales.filter(s => s.marketplace === mkt) : getState().sales;
+  const mkt  = document.getElementById('filter-mkt')?.value ?? '';
+  const dIni = document.getElementById('filter-date-start')?.value ?? '';
+  const dFin = document.getElementById('filter-date-end')?.value ?? '';
+
+  let d = getState().sales;
+
+  // Filtro por marketplace
+  if (mkt) d = d.filter(s => s.marketplace === mkt);
+
+  // Filtro por data inicial
+  if (dIni) d = d.filter(s => (s.data || '') >= dIni);
+
+  // Filtro por data final
+  if (dFin) d = d.filter(s => (s.data || '') <= dFin);
+
   sh('tbody-vendas', d.length
     ? d.map(rowHTML).join('')
-    : emptyRow(9, 'Nenhuma venda registrada.'));
+    : emptyRow(9, 'Nenhuma venda encontrada.'));
+}
+
+/**
+ * Reseta todos os filtros da página de Vendas e re-renderiza.
+ */
+export function resetVendasFilter() {
+  const s = document.getElementById('filter-date-start');
+  const e = document.getElementById('filter-date-end');
+  const m = document.getElementById('filter-mkt');
+  if (s) s.value = '';
+  if (e) e.value = '';
+  if (m) m.value = '';
+  renderVendasPage();
 }

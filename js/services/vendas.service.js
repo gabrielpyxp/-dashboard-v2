@@ -38,6 +38,34 @@ export async function createVenda(fields) {
   return { data, error };
 }
 
+export async function updateVenda(id, fields) {
+  const { user, sales } = getState();
+  const payload = {
+    data:        fields.data,
+    produto:     cap(san(fields.produto), 150),
+    custo:       +fields.custo,
+    venda:       +fields.venda,
+    marketplace: fields.marketplace,
+    status:      fields.status,
+    foto_url:    fields.foto_url || null,
+    notas:       cap(san(fields.notas || ''), 300),
+  };
+
+  const { data, error } = await sb
+    .from('vendas')
+    .update(payload)
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select()
+    .single();
+
+  if (!error && data) {
+    setState({ sales: sales.map(s => s.id === id ? data : s) });
+    await logHistory('editado', 'venda', `Venda de "${fields.produto}" atualizada`);
+  }
+  return { data, error };
+}
+
 export async function deleteVenda(id) {
   const { user, sales } = getState();
   const venda = sales.find(s => s.id === id);

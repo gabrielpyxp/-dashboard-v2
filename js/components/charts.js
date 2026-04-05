@@ -1,10 +1,12 @@
 // js/components/charts.js — Wrappers do Chart.js
 
 import { getState, setState } from '../state.js';
+import { fmt } from '../utils/format.js';
 
 export function renderCharts() {
   renderBar();
   renderDoughnut();
+  renderRevenueLine();
 }
 
 function renderBar() {
@@ -68,3 +70,89 @@ function renderDoughnut() {
   });
   setState({ chartDoughnut: chart });
 }
+
+/**
+ * Gráfico de linha — evolução da receita acumulada nos últimos 30 dias.
+ */
+function renderRevenueLine() {
+  const { sales, chartRevLine } = getState();
+  if (chartRevLine) { chartRevLine.destroy(); setState({ chartRevLine: null }); }
+
+  const ctx = document.getElementById('chartRevLine');
+  if (!ctx) return;
+
+  // Constrói os últimos 30 dias a partir de hoje
+  const now = new Date();
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().split('T')[0]);
+  }
+
+  // Mapeia vendas por dia
+  const dailySales = {};
+  sales.forEach(s => {
+    const dia = s.data || '';
+    if (dailySales[dia]) dailySales[dia] += +s.venda;
+    else dailySales[dia] = +s.venda;
+  });
+
+  // Receita acumulada ao longo dos 30 dias
+  let cumulative = 0;
+  const labels = [];
+  const data   = [];
+  days.forEach(d => {
+    cumulative += (dailySales[d] || 0);
+    data.push(parseFloat(cumulative.toFixed(2)));
+    labels.push(d.slice(5).replace('-', '/')); // "MM/DD" curto
+  });
+
+  // só monta se houver dado
+  if (cumulative === 0) {
+    const blank = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [{ data: Array(30).fill(0), borderColor: 'rgba(26,255,110,.4)', borderWidth: 2, pointRadius: 0, tension: .4 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { ticks: { color: '#767670', font: { size: 9 }, maxTicksLimit: 10 }, grid: { display: false }, border: { display: false } },
+          y: { ticks: { color: '#767670', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,.03)' }, border: { display: false } },
+        },
+      },
+    });
+    setState({ chartRevLine: blank });
+    return;
+  }
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        borderColor: 'rgba(26,255,110,.7)',
+        backgroundColor: 'rgba(26,255,110,.06)',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        fill: true,
+        tension: .4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: c => 'Acumulado: ' + fmt(+c.raw) },
+      }},
+      scales: {
+        x: { ticks: { color: '#767670', font: { size: 9 }, maxTicksLimit: 10 }, grid: { display: false }, border: { display: false } },
+        y: { ticks: { color: '#767670', font: { size: 9 }, callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,.03)' }, border: { display: false } },
+      },
+    },
+  });
+  setState({ chartRevLine: chart });
+}
+

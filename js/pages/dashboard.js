@@ -65,9 +65,14 @@ export function rowHTML(s) {
     <td>${(+s.margem || 0).toFixed(1)}%</td>
     <td class="tdm">${san(s.marketplace || '')}</td>
     <td><span class="pill ${cls}"><span class="dot"></span>${label}</span></td>
-    <td><button class="icon-btn danger" data-action="deleteVenda" data-id="${s.id}" title="Remover">
-      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-    </button></td>
+    <td>
+      <button class="icon-btn" data-action="editVenda" data-id="${s.id}" title="Editar venda">
+        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+      <button class="icon-btn danger" data-action="deleteVenda" data-id="${s.id}" title="Remover">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>
+    </td>
   </tr>`;
 }
 

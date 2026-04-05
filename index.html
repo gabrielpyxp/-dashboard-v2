@@ -205,6 +205,10 @@
       <div class="card"><div class="chdr"><span class="ctitle">Lucro por venda</span><span class="ctag">Últimas 10</span></div><div style="position:relative;height:200px"><canvas id="chartBar"></canvas></div></div>
       <div class="card"><div class="chdr"><span class="ctitle">Distribuição de Margem</span><span class="ctag">Geral</span></div><div style="position:relative;height:200px"><canvas id="chartDoughnut"></canvas></div></div>
     </div>
+    <div class="card" style="margin-top:16px">
+      <div class="chdr"><span class="ctitle">Evolução da Receita</span><span class="ctag">Últimos 30 dias</span></div>
+      <div style="position:relative;height:220px"><canvas id="chartRevLine"></canvas></div>
+    </div>
 
     <div class="twrap">
       <div class="ttoolbar">
@@ -245,7 +249,12 @@
     <div class="twrap">
       <div class="ttoolbar">
         <span class="ctitle">Todas as vendas</span>
-        <select class="sinp noi" id="filter-mkt" style="max-width:200px" aria-label="Filtrar por marketplace"></select>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input type="date" id="filter-date-start" class="sinp" style="max-width:155px" aria-label="Data início">
+          <input type="date" id="filter-date-end" class="sinp" style="max-width:155px" aria-label="Data fim">
+          <select class="sinp noi" id="filter-mkt" style="max-width:200px" aria-label="Filtrar por marketplace"></select>
+          <button class="btn btn-g" style="padding:6px 12px;font-size:12px" data-action="resetVendasFilter" title="Limpar filtros">Limpar</button>
+        </div>
       </div>
       <div class="tscroll">
         <table><thead><tr><th>Data</th><th>Produto</th><th>Custo</th><th>Venda</th><th>Lucro</th><th>Margem</th><th>Marketplace</th><th>Status</th><th></th></tr></thead>
@@ -258,7 +267,13 @@
   <div class="page" id="page-produtos">
     <div class="ph">
       <div><h1 class="ptitle">Catálogo</h1><p class="psub">Seus produtos cadastrados</p></div>
-      <div class="ha"><button class="btn btn-p" data-action="openProdModal"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novo Produto</button></div>
+      <div class="ha">
+        <button class="btn btn-g" data-action="exportProdCSV">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <button class="btn btn-p" data-action="openProdModal"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novo Produto</button>
+      </div>
     </div>
     <div class="kgrid" style="margin-bottom:18px">
       <div class="kcard g"><div class="kicon g"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><div class="klbl">Cadastrados</div><div class="kval" id="cat-tot">0</div></div>
@@ -325,6 +340,7 @@
 <div class="movl" id="modal-venda" role="dialog" aria-modal="true" aria-labelledby="mv-title">
   <div class="modal">
     <h2 class="mtitle" id="mv-title">Registrar Venda</h2>
+    <input type="hidden" id="fv-id">
 
     <div class="fgrp">
       <label class="flbl" for="fv-prod">Produto *</label>
