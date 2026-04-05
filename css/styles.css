@@ -289,10 +289,10 @@ input, select, textarea { font-family: var(--fb); }
    Glassmorphism + slide animation for mobile
    ═══════════════════════════════════════════════════════════ */
 .sidebar {
-  width: var(--sidebar); min-height: 100vh;
-  background: var(--glass-bg);
-  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-  border-right: 1px solid var(--glass-border);
+  width: var(--sidebar); height: 100vh;
+  max-height: 100vh;
+  background: var(--black2);
+  border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   padding: 24px 14px;
   position: fixed; top: 0; left: 0; z-index: 200;

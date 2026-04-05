@@ -27,7 +27,6 @@ export async function createVenda(fields) {
     marketplace: fields.marketplace,
     status:      fields.status,
     foto_url:    fields.foto_url || null,
-    notas:       cap(san(fields.notas || ''), 300),
     criado_em:   Date.now(),
   };
   const { data, error } = await sb.from('vendas').insert(payload).select().single();
@@ -48,7 +47,6 @@ export async function updateVenda(id, fields) {
     marketplace: fields.marketplace,
     status:      fields.status,
     foto_url:    fields.foto_url || null,
-    notas:       cap(san(fields.notas || ''), 300),
   };
 
   const { data, error } = await sb
