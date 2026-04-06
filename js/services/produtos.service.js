@@ -71,11 +71,20 @@ export async function saveProduto(fields, fotoFile, editImgUrl, editId) {
   let error, data;
 
   if (editId) {
-    ({ error, data } = await sb
-      .from('produtos').update(obj).eq('id', editId).eq('user_id', user.id)
-      .select().single());
-    if (!error && data) {
-      setState({ produtos: getState().produtos.map(p => p.id === editId ? data : p) });
+    // Remove atualizado_em do obj se nao for alteracao real
+    const { error: upErr } = await sb
+      .from('produtos').update(obj).eq('id', editId).eq('user_id', user.id);
+
+    if (upErr) {
+      return { error: upErr };
+    }
+
+    // Busca o produto atualizado manualmente
+    const { data: updated } = await sb
+      .from('produtos').select('*').eq('id', editId).single();
+
+    if (updated) {
+      setState({ produtos: getState().produtos.map(p => p.id === editId ? updated : p) });
       await logHistory('editado', 'produto', `Produto "${fields.nome}" atualizado`);
     }
   } else {
