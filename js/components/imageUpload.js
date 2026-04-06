@@ -25,6 +25,13 @@ export function renderImgArea(previewUrl) {
       <div class="isub">JPG, JPEG, PNG ou WebP — máx 3MB</div>
       <input type="file" id="fp-foto" accept="${ACCEPT}" data-action="fotoChange" class="hidden-input" aria-label="Selecionar foto">`;
   }
+
+  // Handler para clicar na area disparar o input file
+  area.onclick = (e) => {
+    if (e.target.closest('.iremove')) return;
+    const input = area.querySelector('input[type="file"]');
+    if (input) input.click();
+  };
 }
 
 export async function handleFotoChange(input) {
