@@ -7,6 +7,24 @@ import { toastErr } from './toast.js';
 
 const ACCEPT = 'image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
 
+function setupAreaClick() {
+  const area = $('img-area');
+  if (!area) return;
+
+  area.style.cursor = 'pointer';
+
+  // Remover listeners anteriores clonando o node
+  const newArea = area.cloneNode(true);
+  area.parentNode.replaceChild(newArea, area);
+
+  // Novo handler de click
+  newArea.addEventListener('click', (e) => {
+    if (e.target.closest('.iremove')) return;
+    const input = newArea.querySelector('input[type="file"]');
+    if (input) input.click();
+  });
+}
+
 export function renderImgArea(previewUrl) {
   const area = $('img-area');
   if (!area) return;
@@ -15,23 +33,18 @@ export function renderImgArea(previewUrl) {
     area.classList.add('hasimg');
     area.innerHTML = `
       <img class="iprev" src="${previewUrl}" alt="preview">
-      <button class="iremove" data-action="removeImg" type="button">× Remover</button>
-      <input type="file" accept="${ACCEPT}" data-action="fotoChange" class="hidden-input" aria-label="Trocar foto">`;
+      <button class="iremove" data-action="removeImg" type="button">\u00D7 Remover</button>
+      <input type="file" id="fp-foto" accept="${ACCEPT}" data-action="fotoChange" class="hidden-input" aria-label="Trocar foto">`;
   } else {
     area.classList.remove('hasimg');
     area.innerHTML = `
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
       <div class="itxt">Clique para adicionar foto</div>
-      <div class="isub">JPG, JPEG, PNG ou WebP — máx 3MB</div>
+      <div class="isub">JPG, JPEG, PNG ou WebP \u2014 m\u00E1x 3MB</div>
       <input type="file" id="fp-foto" accept="${ACCEPT}" data-action="fotoChange" class="hidden-input" aria-label="Selecionar foto">`;
   }
 
-  // Handler para clicar na area disparar o input file
-  area.onclick = (e) => {
-    if (e.target.closest('.iremove')) return;
-    const input = area.querySelector('input[type="file"]');
-    if (input) input.click();
-  };
+  setupAreaClick();
 }
 
 export async function handleFotoChange(input) {
@@ -39,16 +52,23 @@ export async function handleFotoChange(input) {
   if (!file) return;
 
   // Validacao simples: tipo e tamanho
-  const ok = file.type.startsWith('image/');
-  if (!ok) { toastErr('Formato inválido. Use JPG, PNG ou WebP.'); input.value = ''; return; }
-  if (file.size > 3 * 1024 * 1024) { toastErr('Imagem maior que 3MB.'); input.value = ''; return; }
+  if (!file.type.startsWith('image/')) {
+    toastErr('Formato inv\u00E1lido. Use JPG, PNG ou WebP.');
+    input.value = '';
+    return;
+  }
+  if (file.size > 3 * 1024 * 1024) {
+    toastErr('Imagem maior que 3MB.');
+    input.value = '';
+    return;
+  }
 
   // Converte para base64 para a IA
   let base64 = null, mimeType = null;
   try {
-    base64    = await toBase64(file);
-    mimeType  = file.type;
-  } catch { /* não bloqueia */ }
+    base64 = await toBase64(file);
+    mimeType = file.type;
+  } catch { /* n\u00E3o bloqueia */ }
 
   setState({ fotoFile: file, fotoBase64: base64, fotoMimeType: mimeType });
 
@@ -69,7 +89,7 @@ export function removeImg() {
   if (res) res.innerHTML = '';
 }
 
-/** Mostra o painel de IA mesmo sem imagem (geração por dados textuais) */
+/** Mostra o painel de IA mesmo sem imagem (gera\u00E7\u00E3o por dados textuais) */
 export function showAiPanel() {
   const panel = $('ai-panel');
   if (panel) panel.style.display = 'block';
