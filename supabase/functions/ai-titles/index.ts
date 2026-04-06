@@ -2,6 +2,88 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY')
 
+const NL = '\n'
+
+function buildFullPrompt(qtde: number, usr: string): string {
+  const P: string[] = []
+  P.push(usr)
+  P.push('')
+  P.push(
+    'Retorne um JSON array com exatamente ' +
+    qtde + ' objetos. Cada objeto DEVE ' +
+    'ter 4 campos: "titulo", "descricaoCurta", ' +
+    '"descricaoLonga", "tags".'
+  )
+  P.push('')
+  P.push('Regras do titulo:')
+  P.push('- Maximo 60 caracteres')
+  P.push('- Formato: Produto, Marca/Modelo, Diferencial')
+  P.push('')
+  P.push('Regras da descricaoCurta:')
+  P.push('- Linha 1: nome do produto')
+  P.push('- Linha 2: frase curta de impacto')
+  P.push('- Linhas 3-5: ✅ com caracteristicas principais')
+  P.push('- Linha 6: 📦 Produto novo')
+  P.push('- Linha 7 em branco')
+  P.push('- Linha 8: 🚚 Entregas em Cidade Ocidental e regiao.')
+  P.push('- Linha 9: 💳 Parcelamento em ate 3x sem juros ou 12x com taxa.')
+  P.push('')
+  P.push('Regras da descricaoLonga:')
+  P.push('- Linha 1: nome do produto')
+  P.push('- Linhas 2-4: paragrafo persuasivo')
+  P.push('- Linha 5 em branco')
+  P.push('- Linha 6: "O que voce vai levar:"')
+  P.push('- Linhas 7-10: 🔸 com detalhes tecnicos')
+  P.push('- Linha 11: 📦 Estado do item')
+  P.push('- Linha 12 em branco')
+  P.push('- Linha 13: 🚚 Entregas em Cidade Ocidental e regiao.')
+  P.push('- Linha 14: 💳 Parcelamento em ate 3x sem juros ou 12x com taxa.')
+  P.push('')
+  P.push('Regras das tags:')
+  P.push('- 8 a 12 palavras-chave')
+  P.push('- Separadas por virgula')
+  P.push('- Tudo em minusculas e sem acentos')
+  P.push('')
+  P.push('Exemplo de OBJETO JSON valido (use EXATAMENTE esta estrutura):')
+  const ex = {
+    titulo: 'Mini Parafusadeira 3.6V USB',
+    descricaoCurta:
+      'Mini Parafusadeira Recarregavel' + NL +
+      'Praticidade na palma da sua ma!' + NL +
+      '\u2705 Bivolt USB recarregavel' + NL +
+      '\u2705 3.6V de potencia' + NL +
+      '\u2705 Leve e compacta' + NL +
+      '\uD83D\uDCE6 Produto novo na caixa.' + NL +
+      NL +
+      '\uD83D\uDE9A Entregas em Cidade Ocidental e regiao.' + NL +
+      '\uD83D\uDCB3 Parcelamento ate 3x sem ou 12x com taxa.',
+    descricaoLonga:
+      'Mini Parafusadeira 3.6V USB Recarregavel' + NL +
+      'Facilite montagens do dia a dia. Ideal para moveis e reparos.' + NL +
+      NL +
+      'O que voce vai levar:' + NL +
+      '\uD83D\uDD38 Motor 3.6V de alta rotacao' + NL +
+      '\uD83D\uDD38 Bateria recarregavel via USB' + NL +
+      '\uD83D\uDD38 Design compacto e leve' + NL +
+      '\uD83D\uDD38 Acompanha kit de bits' + NL +
+      '\uD83D\uDCE6 Estado: Novo na caixa.' + NL +
+      NL +
+      '\uD83D\uDE9A Entregas em Cidade Ocidental e regiao.' + NL +
+      '\uD83D\uDCB3 Parcelamento ate 3x sem ou 12x com taxa.',
+    tags: 'parafusadeira,parafusadeira usb,ferramenta eletrica,' +
+      'parafusadeira 3.6v,bivolt,recarregavel,ferramenta compacta,' +
+      'kit bits,monta moveis,mini ferramenta',
+  }
+  P.push(JSON.stringify([ex]))
+  P.push('')
+  P.push(
+    'NAO crie texto fora do JSON. ' +
+    'Cada objeto deve ter TODOS os 4 campos. ' +
+    'Retorne APENAS o array JSON.'
+  )
+  return P.join(NL)
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -17,96 +99,99 @@ serve(async (req) => {
     const body = await req.json()
     const { base64, mimeType, instrucoes, quantidade } = body
 
-    const systemPrompt = `Voce e um especialista em vendas, e-commerce e copywriting para marketplaces. Sua missao e receber fotos ou informacoes basicas de produtos e transforma-las em anuncios altamente otimizados para busca e conversao, facilitando a vida do vendedor.
+    const qtde = quantidade || 3
+    const sysPrompt = 'Retorne APENAS JSON array. Nada mais.'
+    const usrPrompt = instrucoes ||
+      'Analise esta imagem do produto e crie anuncios otimizados para marketplace.'
+    const fullPrompt = buildFullPrompt(qtde, usrPrompt)
 
-REGRAS OBRIGATORIAS (Siga rigorosamente):
-
-Uso de Emojis: Utilize emojis de forma estrategica para destacar os beneficios, organizar a leitura e chamar a atencao do cliente, mas sem exageros.
-
-Duas opcoes de descricao: Sempre entregue uma descricao "Direta ao Ponto" (para leitura rapida) e uma "Longa" (para clientes que gostam de detalhes).
-
-Rodape padrao: TODAS as descricoes devem obrigatoriamente terminar com o bloco de "Informacoes de compra" sobre entrega e parcelamento.
-
-ESTRUTURA DE RESPOSTA EXIGIDA:
-
-Sempre que eu enviar um produto, retorne EXATAMENTE neste formato JSON:
-
-Um array de objetos, cada um com:
-
-- titulo: (ate 60 caracteres, com Produto + Marca/Modelo + Diferencial)
-- descricaoCurta: Estrutura:
-  [Nome do Produto]
-  [Uma frase curta e de impacto vendendo o produto]
-  ✅ [Caracteristica principal 1]
-  ✅ [Caracteristica principal 2]
-  ✅ [Caracteristica principal 3]
-  📦 Produto novo (adicionar "na caixa" ou "lacrado" se aplicavel).
-
-  🚚 Realizamos entregas em Cidade Ocidental e regiao.
-  💳 Parcelamento em ate 3 vezes sem juros ou 12x com taxa da maquininha.
-
-- descricaoLonga: Estrutura:
-  [Nome do Produto]
-  [Escreva um paragrafo persuasivo de 3 a 4 linhas destacando o principal beneficio do produto, como ele ajuda o cliente no dia a dia e por que e uma otima compra. Use emojis que combinem com o texto].
-
-  O que voce vai levar:
-  🔸 [Detalhe tecnico ou beneficio bem explicado 1]
-  🔸 [Detalhe tecnico ou beneficio bem explicado 2]
-  🔸 [Detalhe tecnico ou beneficio bem explicado 3]
-  🔸 [Detalhe sobre acessorios ou kit, se houver]
-  📦 Estado do item: Novo (adicionar "na caixa" ou "lacrado" se aplicavel).
-
-  🚚 Realizamos entregas em Cidade Ocidental e regiao.
-  💳 Parcelamento em ate 3 vezes sem juros ou 12x com taxa da maquininha.
-
-- tags: lista de 8 a 12 palavras-chave separadas por virgula, em minusculas e sem acentos
-
-Retorne APENAS um JSON valido. Nada mais. Gere exatamente ${quantidade || 3} opcoes.`
-
-    const userText = instrucoes || 'Analise esta imagem do produto e crie anuncios otimizados para marketplace.'
-
-    const userContent: Array<any> = base64 && mimeType
-      ? [{ type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }, { type: 'text', text: userText }]
-      : [{ type: 'text', text: userText }]
+    let userContent: any[]
+    if (base64 && mimeType) {
+      const url = 'data:' + mimeType + ';base64,' + base64
+      userContent = [
+        { type: 'image_url', image_url: { url: url } },
+        { type: 'text', text: fullPrompt },
+      ]
+    } else {
+      userContent = [{ type: 'text', text: fullPrompt }]
+    }
 
     const messages = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: sysPrompt },
       { role: 'user', content: userContent },
     ]
+
+    const authToken = 'Bearer ' + OPENROUTER_API_KEY
 
     const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Authorization': authToken,
         'HTTP-Referer': 'https://gabrielpyxp.github.io/-dashboard-v2/',
         'X-Title': 'Revende Dashboard',
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.1-8b-instruct:free',
+        model: 'qwen/qwen3.6-plus:free',
         max_tokens: 4096,
-        messages,
+        temperature: 0.3,
+        messages: messages,
+        seed: 0,
       }),
+    })
 
     if (!resp.ok) {
       const errText = await resp.text()
-      throw new Error(`OpenRouter API error: ${resp.status} - ${errText}`)
+      throw new Error('OpenRouter API error: ' + resp.status + ' - ' + errText)
     }
 
     const data = await resp.json()
-    const text = data.choices?.[0]?.message?.content || ''
+    let text: string = ''
+    const c = data.choices
+    if (c && c[0] && c[0].message) {
+      text = c[0].message.content || ''
+    }
+
+    // Remove markdown code fences
+    const f1 = '```json'
+    const f2 = '```'
+    if (text.indexOf(f1) === 0) {
+      text = text.substring(f1.length)
+    }
+    const lf = text.lastIndexOf(f2)
+    if (lf !== -1 && lf > 10) {
+      text = text.substring(0, lf)
+    }
+    text = text.trim()
+
+    // Tenta extrair o maior array JSON valido
+    try {
+      const results = JSON.parse(text)
+      if (Array.isArray(results) && results.length > 0) {
+        return new Response(JSON.stringify({ results }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        })
+      }
+    } catch (_e) {
+      // fallback
+    }
 
     const match = text.match(/\[[\s\S]*\]/)
-    if (!match) throw new Error('Resposta invalida da IA')
+    if (!match) {
+      throw new Error('Resposta invalida: ' + text.substring(0, 200))
+    }
 
     const results = JSON.parse(match[0])
-    if (!Array.isArray(results)) throw new Error('Formato de resposta invalido')
+    if (!Array.isArray(results)) {
+      throw new Error('Formato invalido: nao e array')
+    }
 
     return new Response(JSON.stringify({ results }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     })
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error) {
+    const err = error as Error
+    return new Response(JSON.stringify({ error: err.message || String(error) }), {
       status: 400,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     })

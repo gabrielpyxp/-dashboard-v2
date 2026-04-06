@@ -100,13 +100,18 @@ export function renderAgenteResults(results) {
   }
 
   st('agente-status', `${results.length} gerada(s)`);
-  container.innerHTML = results.map((r, i) => `
+  container.innerHTML = results.map((r, i) => {
+    const descricao = [r.descricaoCurta, r.descricaoLonga].filter(Boolean).join('\n\n');
+    const safeDesc = descricao
+      ? descricao.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
+      : '';
+    return `
     <div class="ai-agent-result">
       <div class="ai-result-header">
         <span class="ai-result-num">Opção ${i + 1}</span>
       </div>
       <div class="ai-result-title">${san(r.titulo || r.title || '')}</div>
-      ${r.descricao || r.description ? `<div class="ai-result-desc">${san(r.descricao || r.description || '')}</div>` : ''}
+      ${safeDesc ? `<div class="ai-result-desc">${safeDesc}</div>` : ''}
       <button data-action="saveAgenteResult" data-index="${i}" class="ai-save-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px">
           <polyline points="20 6 9 17 4 12"/>
@@ -114,5 +119,5 @@ export function renderAgenteResults(results) {
         Salvar no catálogo
       </button>
     </div>
-  `).join('');
+  `}).join('');
 }

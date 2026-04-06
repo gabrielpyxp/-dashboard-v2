@@ -22,8 +22,8 @@ export async function saveProduto(fields, fotoFile, editImgUrl, editId) {
 
   // Upload de imagem
   if (fotoFile) {
-    const val = await validateImage(fotoFile);
-    if (!val.ok) return { error: val.err };
+    if (fotoFile.size > 3 * 1024 * 1024) return { error: 'Imagem maior que 3MB.' };
+    if (!fotoFile.type.startsWith('image/')) return { error: 'Arquivo deve ser uma imagem.' };
 
     const path = `${user.id}/${Date.now()}_${safeName(fotoFile.name)}`;
     const { data: up, error: upErr } = await sb.storage

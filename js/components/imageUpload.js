@@ -1,7 +1,7 @@
 // js/components/imageUpload.js — Upload e preview de imagem
 
 import { $ } from '../utils/dom.js';
-import { validateImage, toBase64 } from '../utils/security.js';
+import { toBase64 } from '../utils/security.js';
 import { setState } from '../state.js';
 import { toastErr } from './toast.js';
 
@@ -31,8 +31,10 @@ export async function handleFotoChange(input) {
   const file = input?.files?.[0];
   if (!file) return;
 
-  const { ok, err } = await validateImage(file);
-  if (!ok) { toastErr(err); input.value = ''; return; }
+  // Validacao simples: tipo e tamanho
+  const ok = file.type.startsWith('image/');
+  if (!ok) { toastErr('Formato inválido. Use JPG, PNG ou WebP.'); input.value = ''; return; }
+  if (file.size > 3 * 1024 * 1024) { toastErr('Imagem maior que 3MB.'); input.value = ''; return; }
 
   // Converte para base64 para a IA
   let base64 = null, mimeType = null;

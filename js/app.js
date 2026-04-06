@@ -470,8 +470,7 @@ async function handleSaveAgenteResult(index) {
   if (!r) return;
 
   const nome = r.titulo?.trim() || 'Produto sem nome';
-  // Combina descrição curta e longa
-  const descricao = [r.descricaoCurta || r.descricao, r.descricaoLonga].filter(Boolean).join('\n\n');
+  const descricao = [r.descricaoCurta, r.descricaoLonga].filter(Boolean).join('\n\n');
 
   btnLoading('btn-agente-gerar', true, 'Salvando...');
   const { error } = await saveProduto(
