@@ -22,24 +22,38 @@ export async function saveProduto(fields, fotoFile, editImgUrl, editId) {
 
   // Upload de imagem
   if (fotoFile) {
-    if (fotoFile.size > 3 * 1024 * 1024) return { error: 'Imagem maior que 3MB.' };
+    const maxSize = 3 * 1024 * 1024;
+    if (fotoFile.size > maxSize) return { error: 'Imagem maior que 3MB.' };
     if (!fotoFile.type.startsWith('image/')) return { error: 'Arquivo deve ser uma imagem.' };
 
-    const path = `${user.id}/${Date.now()}_${safeName(fotoFile.name)}`;
-    const { data: up, error: upErr } = await sb.storage
-      .from('produtos')
-      .upload(path, fotoFile, { upsert: true, contentType: fotoFile.type });
+    const name = safeName(fotoFile.name);
+    const path = `${user.id}/${Date.now()}_${name}`;
 
-    if (upErr) return { error: `Erro no upload: ${upErr.message}` };
-    foto_url = sb.storage.from('produtos').getPublicUrl(up.path).data.publicUrl;
+    let uploadResult;
+    try {
+      const { data: up, error: upErr } = await sb.storage
+        .from('produtos')
+        .upload(path, fotoFile, { upsert: true, contentType: fotoFile.type });
+
+      uploadResult = { data: up, error: upErr };
+    } catch (uploadError) {
+      return { error: 'Falha no upload: ' + (uploadError.message || 'Erro desconhecido') };
+    }
+
+    if (uploadResult.error) return { error: 'Erro no upload: ' + uploadResult.error.message };
+
+    const { data: publicUrl } = sb.storage.from('produtos').getPublicUrl(uploadResult.data.path);
+    if (publicUrl && publicUrl.publicUrl) {
+      foto_url = publicUrl.publicUrl;
+    }
   }
 
   const now = Date.now();
   const obj = {
     user_id:       user.id,
     nome:          cap(san(fields.nome), 150),
-    descricao:     cap(san(fields.descricao || ''), 500),
-    categoria:     fields.categoria,
+    descricao:     cap(san(fields.descricao || ''), 2000),
+    categoria:     fields.categoria || '',
     fornecedor:    cap(san(fields.fornecedor || ''), 100),
     custo:         +fields.custo,
     venda:         +fields.venda,
@@ -49,6 +63,10 @@ export async function saveProduto(fields, fotoFile, editImgUrl, editId) {
     foto_url,
     atualizado_em: now,
   };
+
+  // Debug
+  console.log('[saveProduto] obj:', JSON.stringify(obj).substring(0, 300));
+  console.log('[saveProduto] editId:', editId, 'hasFoto:', !!fotoFile);
 
   let error, data;
 
