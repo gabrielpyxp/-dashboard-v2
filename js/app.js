@@ -315,7 +315,12 @@ async function handleSaveProd() {
   $('uprog').style.display = 'none';
   btnLoading('btn-sp', false, 'Salvar Produto');
 
-  if (error) { toastErr(typeof error === 'string' ? error : 'Erro ao salvar produto.'); return; }
+  if (error) {
+    console.error('[handleSaveProd] Erro detalhado:', error);
+    const msg = typeof error === 'string' ? error : (error.message || error.details || error.hint || JSON.stringify(error));
+    toastErr('Erro: ' + msg);
+    return;
+  }
   toastOk(editId ? 'Produto atualizado!' : 'Produto cadastrado!');
   closeProdModal();
 }
