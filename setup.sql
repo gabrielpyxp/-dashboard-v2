@@ -52,6 +52,15 @@ create table if not exists produtos (
   criado_em    bigint default extract(epoch from now())::bigint * 1000,
   atualizado_em bigint default extract(epoch from now())::bigint * 1000
 );
+
+-- Adiciona coluna se nao existir (caso a tabela ja tenha sido criada)
+alter table produtos add column if not exists atualizado_em bigint default extract(epoch from now())::bigint * 1000;
+alter table produtos drop column if exists lucro_unit;
+alter table produtos drop column if exists margem;
+
+-- Remove colunas generated das vendas se existirem (causando null)
+alter table vendas drop column if exists lucro;
+alter table vendas drop column if exists margem;
 alter table produtos enable row level security;
 drop policy if exists "own_produtos" on produtos;
 create policy "own_produtos" on produtos for all

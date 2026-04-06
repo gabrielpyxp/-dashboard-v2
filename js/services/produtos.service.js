@@ -61,7 +61,6 @@ export async function saveProduto(fields, fotoFile, editImgUrl, editId) {
     estoque_min:   +fields.estoqueMin || 0,
     obs:           cap(san(fields.obs || ''), 300),
     foto_url,
-    atualizado_em: now,
   };
 
   // Debug
@@ -88,8 +87,7 @@ export async function saveProduto(fields, fotoFile, editImgUrl, editId) {
       await logHistory('editado', 'produto', `Produto "${fields.nome}" atualizado`);
     }
   } else {
-    obj.criado_em = now;
-    ({ error, data } = await sb.from('produtos').insert(obj).select().single());
+      ({ error, data } = await sb.from('produtos').insert(obj).select().single());
     if (!error && data) {
       setState({ produtos: [data, ...getState().produtos] });
       await logHistory('criado', 'produto', `Produto "${fields.nome}" cadastrado`);

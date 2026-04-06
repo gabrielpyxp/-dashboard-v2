@@ -49,19 +49,26 @@ export async function updateVenda(id, fields) {
     foto_url:    fields.foto_url || null,
   };
 
-  const { data, error } = await sb
+  const { error } = await sb
     .from('vendas')
     .update(payload)
     .eq('id', id)
-    .eq('user_id', user.id)
-    .select()
+    .eq('user_id', user.id);
+
+  if (error) return { data: null, error };
+
+  // Busca separado para evitar problema com generated columns
+  const { data } = await sb
+    .from('vendas')
+    .select('*')
+    .eq('id', id)
     .single();
 
-  if (!error && data) {
+  if (data) {
     setState({ sales: sales.map(s => s.id === id ? data : s) });
     await logHistory('editado', 'venda', `Venda de "${fields.produto}" atualizada`);
   }
-  return { data, error };
+  return { data, error: null };
 }
 
 export async function deleteVenda(id) {
