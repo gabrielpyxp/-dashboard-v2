@@ -13,7 +13,15 @@ export async function loadVendas() {
     .select('*')
     .eq('user_id', user.id)
     .order('criado_em', { ascending: false });
-  if (!error) setState({ sales: data || [] });
+
+  if (!error) {
+    const enriched = (data || []).map(s => ({
+      ...s,
+      lucro: (+s.venda || 0) - (+s.custo || 0),
+      margem: (+s.venda > 0) ? ((+s.venda - +s.custo) / +s.venda) * 100 : 0,
+    }));
+    setState({ sales: enriched });
+  }
 }
 
 export async function createVenda(fields) {
