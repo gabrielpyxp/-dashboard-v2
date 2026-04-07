@@ -6,8 +6,18 @@ import { getState, setState } from '../state.js';
 export async function loadConfig() {
   const { user } = getState();
   if (!user) return;
-  const { data } = await sb.from('config').select('*').eq('user_id', user.id).single();
-  if (data?.meta_mensal) setState({ meta: data.meta_mensal });
+  const { data } = await sb.from('config').select('*').eq('user_id', user.id).maybeSingle();
+  if (data) {
+    if (data.meta_mensal) setState({ meta: data.meta_mensal });
+  } else {
+    // Cria configuração padrão se não existir
+    await sb.from('config').insert({
+      user_id: user.id,
+      meta_mensal: 500,
+      moeda: 'BRL',
+      tema: 'dark',
+    });
+  }
 }
 
 export async function saveMeta(valor) {

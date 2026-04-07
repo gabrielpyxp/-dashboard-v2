@@ -23,6 +23,7 @@ create table if not exists vendas (
   notas       text,
   criado_em   bigint default extract(epoch from now())::bigint * 1000
 );
+
 alter table vendas enable row level security;
 drop policy if exists "own_vendas" on vendas;
 create policy "own_vendas" on vendas for all
@@ -53,14 +54,6 @@ create table if not exists produtos (
   atualizado_em bigint default extract(epoch from now())::bigint * 1000
 );
 
--- Adiciona coluna se nao existir (caso a tabela ja tenha sido criada)
-alter table produtos add column if not exists atualizado_em bigint default extract(epoch from now())::bigint * 1000;
-alter table produtos drop column if exists lucro_unit;
-alter table produtos drop column if exists margem;
-
--- Remove colunas generated das vendas se existirem (causando null)
-alter table vendas drop column if exists lucro;
-alter table vendas drop column if exists margem;
 alter table produtos enable row level security;
 drop policy if exists "own_produtos" on produtos;
 create policy "own_produtos" on produtos for all
@@ -77,6 +70,7 @@ create table if not exists historico (
   usuario  text,
   ts       bigint default extract(epoch from now())::bigint * 1000
 );
+
 alter table historico enable row level security;
 drop policy if exists "own_historico" on historico;
 create policy "own_historico" on historico for all
@@ -92,10 +86,27 @@ create table if not exists config (
   tema        text default 'dark',
   atualizado_em bigint default extract(epoch from now())::bigint * 1000
 );
+
 alter table config enable row level security;
 drop policy if exists "own_config" on config;
 create policy "own_config" on config for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ── MIGRATION: adiciona colunas que podem estar faltando ────────
+alter table produtos add column if not exists descricao text default '';
+alter table produtos add column if not exists ativo boolean default true;
+alter table produtos add column if not exists atualizado_em bigint default 0;
+alter table vendas add column if not exists criado_em bigint default extract(epoch from now())::bigint * 1000;
+
+-- ── MIGRATION: remove colunas generated que causam null ────────
+-- (Se sua versão antiga já tinha drop, isso é seguro repetir)
+-- Só remova se o JS não usar essas colunas diretamente.
+-- O JS atual ainda referencia lucro e margem (calculados via JS).
+-- Descomente se a tabela no Supabase ainda tem essas colunas:
+-- alter table vendas drop column if exists lucro;
+-- alter table vendas drop column if exists margem;
+-- alter table produtos drop column if exists lucro_unit;
+-- alter table produtos drop column if exists margem;
 
 -- ================================================================
 -- STORAGE POLICIES — bucket "produtos"

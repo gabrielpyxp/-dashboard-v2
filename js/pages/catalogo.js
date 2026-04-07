@@ -39,7 +39,9 @@ function prodCard(p) {
   const ze = +p.estoque === 0;
   const sc = ze ? 'pill-bad' : al ? 'pill-warn' : 'pill-ok';
   const st_ = ze ? 'Sem estoque' : al ? 'Estoque baixo' : 'Em estoque';
-  const mc = +p.margem >= 20 ? 'var(--green)' : +p.margem >= 0 ? 'var(--white2)' : 'var(--red)';
+  const lucroUnit = (+p.venda) - (+p.custo);
+  const margemCalc = +p.venda > 0 ? ((lucroUnit / +p.venda) * 100) : 0;
+  const mc = margemCalc >= 20 ? 'var(--green)' : margemCalc >= 0 ? 'var(--white2)' : 'var(--red)';
 
   const imgEl = p.foto_url && p.foto_url.length > 5
     ? `<img src="${san(p.foto_url)}" alt="${san(p.nome)}" class="pcard-img" loading="lazy">`
